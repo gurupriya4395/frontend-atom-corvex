@@ -185,7 +185,7 @@ export default function GlobeMap({
 
 function createWorld(el, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#d7e6f4')
+  scene.background = new THREE.Color('#f4f4f8')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 40, 280)
@@ -207,17 +207,26 @@ function createWorld(el, getOnSelect) {
   controls.maxDistance = 520
   controls.enablePan = false
 
-  scene.add(new THREE.AmbientLight(0xf4f7fb, 1.35))
-  const sun = new THREE.DirectionalLight(0xfff6e8, 1.55)
-  sun.position.set(-120, 80, 160)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.85))
+  const sun = new THREE.DirectionalLight(0xffffff, 1.05)
+  sun.position.set(-60, 140, 120)
   scene.add(sun)
+  const fill = new THREE.DirectionalLight(0xf0f4ff, 0.72)
+  fill.position.set(120, -20, -90)
+  scene.add(fill)
+  const rim = new THREE.DirectionalLight(0xe9d5ff, 0.35)
+  rim.position.set(-140, 40, -100)
+  scene.add(rim)
 
+  const clayTex = paintClayEarth()
   const globe = new THREE.Mesh(
-    new THREE.SphereGeometry(R, 64, 48),
+    new THREE.SphereGeometry(R, 80, 64),
     new THREE.MeshPhongMaterial({
-      color: 0x1a1410,
-      emissive: 0x0b0806,
-      shininess: 8,
+      map: clayTex,
+      color: 0xffffff,
+      emissive: 0xfafafc,
+      shininess: 42,
+      specular: 0xf5f5f8,
     }),
   )
   scene.add(globe)
@@ -225,9 +234,9 @@ function createWorld(el, getOnSelect) {
   const atmos = new THREE.Mesh(
     new THREE.SphereGeometry(R * 1.045, 48, 32),
     new THREE.MeshBasicMaterial({
-      color: 0x9ec4e8,
+      color: 0xc4b5fd,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.09,
       side: THREE.BackSide,
     }),
   )
@@ -235,23 +244,6 @@ function createWorld(el, getOnSelect) {
 
   const overlay = new THREE.Group()
   globe.add(overlay)
-
-  const loader = new THREE.TextureLoader()
-  loader.load(
-    '/textures/earth-night.jpg',
-    (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace
-      globe.material.map = tex
-      globe.material.color = new THREE.Color(0xffffff)
-      globe.material.needsUpdate = true
-    },
-    undefined,
-    () => {
-      globe.material.map = paintFallbackEarth()
-      globe.material.color = new THREE.Color(0xffffff)
-      globe.material.needsUpdate = true
-    },
-  )
 
   let raf = 0
   let paused = false
@@ -476,26 +468,71 @@ function destPoint(lat, lng, km, bearingDeg) {
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI]
 }
 
-function paintFallbackEarth() {
+function paintClayEarth() {
+  const w = 2048
+  const h = 1024
   const c = document.createElement('canvas')
-  c.width = 1024
-  c.height = 512
+  c.width = w
+  c.height = h
   const g = c.getContext('2d')
-  g.fillStyle = '#0c1218'
-  g.fillRect(0, 0, 1024, 512)
-  g.fillStyle = '#2a241c'
-  const blobs = [
-    [280, 180, 160, 90],
-    [520, 220, 90, 70],
-    [780, 160, 140, 80],
-    [350, 340, 70, 110],
-    [820, 340, 100, 60],
+
+  const ocean = g.createLinearGradient(0, 0, 0, h)
+  ocean.addColorStop(0, '#fafafc')
+  ocean.addColorStop(0.45, '#f6f6fa')
+  ocean.addColorStop(1, '#ececf4')
+  g.fillStyle = ocean
+  g.fillRect(0, 0, w, h)
+
+  const land = [
+    [420, 360, 200, 110],
+    [980, 320, 240, 130],
+    [1480, 300, 220, 100],
+    [560, 620, 120, 150],
+    [1180, 580, 180, 120],
+    [1680, 520, 160, 90],
+    [300, 480, 90, 70],
+    [820, 440, 70, 55],
+    [640, 280, 55, 40],
+    [1320, 420, 80, 50],
   ]
-  for (const [x, y, rx, ry] of blobs) {
+  for (const [x, y, rx, ry] of land) {
+    const shade = g.createRadialGradient(x - rx * 0.2, y - ry * 0.25, rx * 0.1, x, y, rx * 1.1)
+    shade.addColorStop(0, '#ffffff')
+    shade.addColorStop(0.42, '#eef0f6')
+    shade.addColorStop(0.78, '#e2e4ec')
+    shade.addColorStop(1, '#d8dae4')
+    g.fillStyle = shade
     g.beginPath()
     g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
     g.fill()
   }
+
+  for (let i = 0; i < 140; i++) {
+    const x = Math.random() * w
+    const y = Math.random() * h
+    const r = 18 + Math.random() * 90
+    const lift = g.createRadialGradient(x, y, 0, x, y, r)
+    lift.addColorStop(0, 'rgba(255, 255, 255, 0.55)')
+    lift.addColorStop(0.55, 'rgba(255, 255, 255, 0.12)')
+    lift.addColorStop(1, 'rgba(220, 224, 234, 0)')
+    g.fillStyle = lift
+    g.beginPath()
+    g.arc(x, y, r, 0, Math.PI * 2)
+    g.fill()
+  }
+  for (let i = 0; i < 90; i++) {
+    const x = Math.random() * w
+    const y = Math.random() * h
+    const r = 10 + Math.random() * 48
+    const dent = g.createRadialGradient(x, y, 0, x, y, r)
+    dent.addColorStop(0, 'rgba(196, 200, 212, 0.22)')
+    dent.addColorStop(1, 'rgba(196, 200, 212, 0)')
+    g.fillStyle = dent
+    g.beginPath()
+    g.arc(x, y, r, 0, Math.PI * 2)
+    g.fill()
+  }
+
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
