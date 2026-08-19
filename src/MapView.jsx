@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { eventMarkerHtml, assetMarkerHtml } from './markers'
-import { clock, haversineKm, relativeTime } from './scoring'
+import { eventMarkerHtml, eventCalloutHtml, assetMarkerHtml } from './markers'
+import { haversineKm } from './scoring'
 import { DEMO, MUMBAI_FLOOD_ZONE } from './data'
 
 export default function MapView({
@@ -112,8 +112,8 @@ export default function MapView({
         type: 'fill',
         source: 'flood',
         paint: {
-          'fill-color': '#2a6fbf',
-          'fill-opacity': 0.32,
+          'fill-color': '#38bdf8',
+          'fill-opacity': 0.38,
         },
       })
       map.addLayer({
@@ -121,9 +121,9 @@ export default function MapView({
         type: 'line',
         source: 'flood',
         paint: {
-          'line-color': '#1a4a88',
-          'line-width': 2.2,
-          'line-dasharray': [1.2, 1.1],
+          'line-color': '#0284c7',
+          'line-width': 2.6,
+          'line-dasharray': [1.4, 0.8],
         },
       })
 
@@ -133,8 +133,8 @@ export default function MapView({
         type: 'fill',
         source: 'radius',
         paint: {
-          'fill-color': ['case', ['==', ['get', 'hot'], true], '#d4562a', '#c4a574'],
-          'fill-opacity': 0.16,
+          'fill-color': ['case', ['==', ['get', 'hot'], true], '#fb7185', '#fbbf24'],
+          'fill-opacity': 0.22,
         },
       })
       map.addLayer({
@@ -142,8 +142,8 @@ export default function MapView({
         type: 'line',
         source: 'radius',
         paint: {
-          'line-color': ['case', ['==', ['get', 'hot'], true], '#c45c28', '#8a6a3a'],
-          'line-width': ['case', ['==', ['get', 'hot'], true], 2.4, 1.7],
+          'line-color': ['case', ['==', ['get', 'hot'], true], '#e11d48', '#d97706'],
+          'line-width': ['case', ['==', ['get', 'hot'], true], 2.6, 2],
           'line-dasharray': [2, 2],
         },
       })
@@ -154,9 +154,9 @@ export default function MapView({
         type: 'line',
         source: 'asset-link',
         paint: {
-          'line-color': '#c45c28',
-          'line-width': 2.8,
-          'line-dasharray': [2, 1.2],
+          'line-color': '#ea580c',
+          'line-width': 3.2,
+          'line-dasharray': [2.2, 1],
         },
       })
 
@@ -203,13 +203,7 @@ export default function MapView({
     events.forEach((event) => {
       const el = document.createElement('div')
       el.className = `terrain-ev${selected?.type === 'event' && selected.id === event.id ? ' is-selected' : ''}`
-      el.innerHTML = eventMarkerHtml(event)
-      if (liveOrForecast && event.db && !scene.flood && !scene.warehouse && !scene.distance) {
-        const chip = document.createElement('div')
-        chip.className = `hq-time ${event.db.inside ? 'in' : 'out'}`
-        chip.innerHTML = `<strong>DB ${escapeHtml(event.db.hq.city)}</strong><span>${relativeTime(event.eventAt)} · ${clock(event.eventAt)}</span><span>${escapeHtml(event.db.travel.label)} · ${event.db.km.toFixed(1)} km</span>${event.db.inside ? '<em>inside HQ fence</em>' : '<em>outside fence</em>'}`
-        el.appendChild(chip)
-      }
+      el.innerHTML = eventMarkerHtml(event) + eventCalloutHtml(event)
       el.style.cursor = 'pointer'
       el.addEventListener('click', (e) => {
         e.stopPropagation()
@@ -317,8 +311,8 @@ export default function MapView({
         const km = haversineKm(ev.coords, warehouse.coords)
         const mid = [(ev.coords[0] + warehouse.coords[0]) / 2, (ev.coords[1] + warehouse.coords[1]) / 2]
         const chip = document.createElement('div')
-        chip.className = 'dist-chip'
-        chip.textContent = `${km.toFixed(1)} km · event → warehouse`
+        chip.className = `dist-chip sev-${ev.severity || 'low'}`
+        chip.innerHTML = `<em>Distance</em><b>${km.toFixed(1)} km</b><span>event → ${escapeHtml(warehouse.name)}</span>`
         const mk = new maplibregl.Marker({ element: chip, anchor: 'center' }).setLngLat(mid).addTo(map)
         markersRef.current.push(mk)
       }
@@ -368,7 +362,85 @@ export default function MapView({
     mapRef.current?.resize()
   }, [active])
 
-  return <div className="map-el terrain-map" ref={wrapRef} />
+  const selectedEvent = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
+  const selectedAsset = selected?.type === 'asset' ? assets.find((a) => a.id === selected.id) : null
+
+  const zoomOut = () => {
+    const map = mapRef.current
+    if (!map) return
+    map.flyTo({
+      center: [78.0, 21.5],
+      zoom: 4.15,
+      pitch: 28,
+      bearing: -8,
+      duration: 1200,
+      essential: true,
+    })
+  }
+
+  return (
+    <div className="map-el terrain-map">
+      <div className="terrain-canvas" ref={wrapRef} />
+      <div className="terrain-chrome">
+        <div className="terrain-tools">
+          <button type="button" className="terrain-btn" onClick={zoomOut}>
+            Zoom out
+          </button>
+        </div>
+        {selectedEvent && (
+          <article className={`terrain-readout sev-${selectedEvent.severity}`}>
+            <header>
+              <span className={`sev-badge ${selectedEvent.severity}`}>{selectedEvent.severity}</span>
+              <span className="stamp">Severity · distance</span>
+            </header>
+            <h3>{selectedEvent.title}</h3>
+            <div className="readout-metrics">
+              <div>
+                <span>Distance to site</span>
+                <b>{selectedEvent.linked ? `${selectedEvent.primary.km.toFixed(1)} km` : '—'}</b>
+              </div>
+              <div>
+                <span>Site</span>
+                <b>{selectedEvent.linked ? selectedEvent.primary.asset.name : 'Unlinked'}</b>
+              </div>
+              <div>
+                <span>Fence</span>
+                <b>
+                  {selectedEvent.linked
+                    ? `${selectedEvent.primary.inside ? 'Inside' : 'Outside'} ${selectedEvent.primary.asset.radiusKm} km`
+                    : 'No fence hit'}
+                </b>
+              </div>
+            </div>
+          </article>
+        )}
+        {!selectedEvent && selectedAsset && (
+          <article className="terrain-readout">
+            <header>
+              <span className="sev-badge low">{selectedAsset.criticality}</span>
+              <span className="stamp">Registered site</span>
+            </header>
+            <h3>{selectedAsset.name}</h3>
+            <div className="readout-metrics">
+              <div>
+                <span>Fence</span>
+                <b>{selectedAsset.radiusKm} km</b>
+              </div>
+              <div>
+                <span>City</span>
+                <b>{selectedAsset.city}</b>
+              </div>
+            </div>
+          </article>
+        )}
+        <div className="terrain-key" aria-label="Severity key">
+          <span className="k high">High</span>
+          <span className="k medium">Medium</span>
+          <span className="k low">Low</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function emptyFc() {

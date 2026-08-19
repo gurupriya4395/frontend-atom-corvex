@@ -109,7 +109,7 @@ export default function GlobeMap({
   }, [mode, scene.pulse])
 
   return (
-    <div className="map-wrap">
+    <div className={`map-wrap ${mode === 'map' ? 'is-streets' : ''}`}>
       <div className="hud-frame" aria-hidden="true">
         <i className="c tl" />
         <i className="c tr" />
@@ -154,41 +154,32 @@ export default function GlobeMap({
         <button className={mode === 'globe' ? 'active' : ''} onClick={() => setMode('globe')}>
           World
         </button>
-        <button
-          className={mode === 'map' ? 'active' : ''}
-          onClick={() => setMode('map')}
-        >
+        <button className={mode === 'map' ? 'active' : ''} onClick={() => setMode('map')}>
           Streets
         </button>
       </div>
 
-      <div className="telemetry">
-        <span>SAT-CORVEX</span>
-        <b>
-          {hud.lat.toFixed(2)}° {hud.lng.toFixed(2)}°
-        </b>
-        <span>ALT {hud.alt.toFixed(2)}</span>
-        <i />
-      </div>
+      {mode === 'globe' && (
+        <>
+          <div className="telemetry">
+            <span>SAT-CORVEX</span>
+            <b>
+              {hud.lat.toFixed(2)}° {hud.lng.toFixed(2)}°
+            </b>
+            <span>ALT {hud.alt.toFixed(2)}</span>
+            <i />
+          </div>
 
-      <div className="hud">
-        <div className="legend">
-          <h4>{mode === 'globe' ? 'World' : 'Streets'}</h4>
-          {mode === 'globe' ? (
-            <>
+          <div className="hud">
+            <div className="legend">
+              <h4>World</h4>
               <div className="lg">Arc = event → site</div>
               <div className="lg">Dashed ring = fence</div>
               <div className="lg">Drag to look around</div>
-            </>
-          ) : (
-            <>
-              <div className="lg">Blue dash = DB HQ fence</div>
-              <div className="lg">Chip = HQ → incident time</div>
-              <div className="lg">Zoom in on Live / Forecast</div>
-            </>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

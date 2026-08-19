@@ -3,6 +3,13 @@ export function eventMarkerHtml(event) {
   return `<span class="haz haz-${event.kind} impact-${impact}" title="${escapeHtml(event.title)}">${inner(event.kind)}</span>`
 }
 
+export function eventCalloutHtml(event) {
+  const sev = event.severity || 'low'
+  const km = event.linked ? `${event.primary.km.toFixed(1)} km` : 'Unlinked'
+  const site = event.linked ? event.primary.asset.name : event.place.split(',')[0]
+  return `<div class="ev-callout sev-${sev}"><em>${escapeHtml(sev)}</em><b>${escapeHtml(km)}</b><span>${escapeHtml(site)}</span></div>`
+}
+
 export function assetMarkerHtml(asset) {
   const db = asset.org === 'deutsche-bank'
   const label = db ? `DB ${asset.city}` : asset.name.split(' ')[0]
