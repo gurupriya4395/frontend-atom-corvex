@@ -168,8 +168,12 @@ button { cursor: pointer; }
 }
 .globe-stage.off,
 .map-stage.off { visibility: hidden; pointer-events: none; }
-.globe-stage.on,
-.map-stage.on { visibility: visible; pointer-events: auto; z-index: 2; }
+.globe-stage.on {
+  display: block;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2;
+}
 .map-stage .map-el { position: absolute; inset: 0; }
 .terrain-canvas {
   position: absolute;
