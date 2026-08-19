@@ -2,7 +2,9 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import EventDetail from './EventDetail'
 import SideRail from './SideRail'
-import { ASSETS, EVENTS, INCOMING } from './data'
+import ImpactStage from './ImpactStage'
+import { ASSETS, DEMO, EVENTS, INCOMING } from './data'
+import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay, soWhat } from './scoring'
 import './index.css'
 import './markers.css'
@@ -31,6 +33,15 @@ export default function App() {
   const [freshId, setFreshId] = useState(null)
   const [toast, setToast] = useState(null)
   const [cue, setCue] = useState(null)
+  const [mapMode, setMapMode] = useState('globe')
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [scene, setScene] = useState({
+    pulse: false,
+    flood: false,
+    warehouse: false,
+    distance: false,
+    scoring: false,
+  })
   const searchRef = useRef(null)
   const cueTimers = useRef([])
 
@@ -121,7 +132,11 @@ export default function App() {
         ? { type: 'asset', id: selectedAssetId }
         : null
   const alerts = enriched.filter((e) => e.alert && !acked.has(e.id))
-  const showRadius = selectedEvent?.linked ? selectedEvent.primary.asset.id : selectedAssetId
+  const showRadius = scene.warehouse
+    ? DEMO.assetId
+    : selectedEvent?.linked
+      ? selectedEvent.primary.asset.id
+      : selectedAssetId
   const siteName = siteFilterId ? ASSETS.find((a) => a.id === siteFilterId)?.name : null
 
   const emptyHint = (() => {
@@ -135,11 +150,12 @@ export default function App() {
     return 'Nothing in this cut.'
   })()
 
-  const pickEvent = (id) => {
+  const pickEvent = (id, opts = {}) => {
     setSelectedId(id)
     setSelectedAssetId(null)
     setSiteFilterId(null)
     setPage('operations')
+    setBriefOpen(opts.brief !== false)
   }
 
   const pickAsset = (id) => {
@@ -149,7 +165,11 @@ export default function App() {
     setPage('operations')
     setAffectsOnly(false)
     setFeedMode('geographical')
+    setBriefOpen(false)
   }
+
+  const resetScene = () =>
+    setScene({ pulse: false, flood: false, warehouse: false, distance: false, scoring: false })
 
   const clearCueTimers = () => {
     cueTimers.current.forEach(clearTimeout)
@@ -164,21 +184,35 @@ export default function App() {
     setAffectsOnly(true)
     setSiteFilterId(null)
     setAlertsOpen(false)
-    setCue('1 · Prox · Mumbai flood on the warehouse')
-    pickEvent('ev-flood-mum')
-    cueTimers.current.push(
-      window.setTimeout(() => {
-        setCue('2 · Open Streets · Thane fire · HQ time')
-        pickEvent('ev-fire-thane')
-      }, 2400),
-    )
-    cueTimers.current.push(
-      window.setTimeout(() => {
-        setCue('3 · Ack the bell to clear the alert')
-        setAlertsOpen(true)
-      }, 4800),
-    )
-    cueTimers.current.push(window.setTimeout(() => setCue(null), 9000))
+    setBriefOpen(false)
+    setSelectedId(null)
+    setSelectedAssetId(null)
+    setQ('')
+    setCats({ geopolitical: true, environmental: true, security: true })
+    setSevs({ high: true, medium: true, low: true })
+    setMapMode('globe')
+    resetScene()
+    DESK_BEATS.forEach((beat) => {
+      cueTimers.current.push(
+        window.setTimeout(() => {
+          setCue(beat.cue)
+          if (beat.mapMode) setMapMode(beat.mapMode)
+          setScene((s) => ({
+            pulse: beat.pulse ?? s.pulse,
+            flood: beat.flood ?? s.flood,
+            warehouse: beat.warehouse ?? s.warehouse,
+            distance: beat.distance ?? s.distance,
+            scoring: beat.scoring ?? s.scoring,
+          }))
+          if (beat.select) pickEvent(DEMO.eventId, { brief: false })
+          if (beat.brief) {
+            pickEvent(DEMO.eventId, { brief: true })
+            setScene((s) => ({ ...s, scoring: false }))
+          }
+          if (beat.alerts) setAlertsOpen(true)
+        }, beat.at),
+      )
+    })
   }
 
   const ack = (id) => {
@@ -197,7 +231,10 @@ export default function App() {
         searchRef.current?.focus()
       }
       if (e.key === 'Escape') {
+        clearCueTimers()
+        resetScene()
         setSelectedId(null)
+        setBriefOpen(false)
         setAlertsOpen(false)
         setCue(null)
         searchRef.current?.blur()
@@ -376,6 +413,11 @@ export default function App() {
               showRadiusFor={showRadius}
               acked={acked}
               timeMode={timeMode}
+              mapMode={mapMode}
+              onMapMode={setMapMode}
+              scene={scene}
+              pulseEventId={scene.pulse ? DEMO.eventId : null}
+              highlightAssetId={scene.warehouse ? DEMO.assetId : null}
             />
           </Suspense>
 
@@ -429,6 +471,8 @@ export default function App() {
 
           {cue && <div className="desk-cue">{cue}</div>}
 
+          {scene.scoring && selectedEvent && <ImpactStage event={selectedEvent} />}
+
           {toast && (
             <div className="wire-toast">
               <span>ON WIRE</span>
@@ -466,8 +510,16 @@ export default function App() {
         </div>
       )}
 
-      {page === 'operations' && selectedEvent && (
-        <EventDetail event={selectedEvent} onClose={() => setSelectedId(null)} acknowledged={acked} onAck={ack} />
+      {page === 'operations' && selectedEvent && briefOpen && (
+        <EventDetail
+          event={selectedEvent}
+          onClose={() => {
+            setSelectedId(null)
+            setBriefOpen(false)
+          }}
+          acknowledged={acked}
+          onAck={ack}
+        />
       )}
     </div>
   )

@@ -6,8 +6,22 @@ import { eventMarkerHtml, assetMarkerHtml } from './markers'
 
 const R = 100
 
-export default function GlobeMap({ events, assets, selected, onSelect, showRadiusFor, acked, timeMode }) {
-  const [mode, setMode] = useState('globe')
+export default function GlobeMap({
+  events,
+  assets,
+  selected,
+  onSelect,
+  showRadiusFor,
+  acked,
+  timeMode,
+  mapMode = 'globe',
+  onMapMode,
+  scene = {},
+  pulseEventId,
+  highlightAssetId,
+}) {
+  const mode = mapMode
+  const setMode = (m) => onMapMode?.(m)
   const [MapView, setMapView] = useState(null)
   const [hud, setHud] = useState({ lat: 20.5, lng: 78.9, alt: 2.4 })
   const [status, setStatus] = useState('booting')
@@ -15,8 +29,8 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
   const worldRef = useRef(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
-  const dataRef = useRef({ events, assets, showRadiusFor, acked })
-  dataRef.current = { events, assets, showRadiusFor, acked }
+  const dataRef = useRef({ events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId })
+  dataRef.current = { events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId }
 
   useEffect(() => {
     const el = hostRef.current
@@ -64,12 +78,17 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
 
   useEffect(() => {
     worldRef.current?.setData(dataRef.current)
-  }, [events, assets, showRadiusFor, acked])
+  }, [events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId])
 
   useEffect(() => {
     const world = worldRef.current
     if (!world) return
     world.setAutoRotate(false)
+    if (pulseEventId && mode === 'globe' && !selected) {
+      const ev = events.find((e) => e.id === pulseEventId)
+      if (ev) world.flyTo(ev.coords[1], ev.coords[0], false)
+      return
+    }
     if (!selected) return
     const target =
       selected.type === 'event'
@@ -78,12 +97,16 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
     if (!target) return
     const close = selected.type === 'asset' || Boolean(showRadiusFor)
     world.flyTo(target.coords[1], target.coords[0], close)
-  }, [selected, events, assets, mode, showRadiusFor])
+  }, [selected, events, assets, mode, showRadiusFor, pulseEventId])
 
   useEffect(() => {
     worldRef.current?.setAutoRotate(false)
     worldRef.current?.setPaused(mode !== 'globe')
   }, [mode, selected])
+
+  useEffect(() => {
+    if (mode === 'map' || scene.pulse) import('./MapView.jsx').then((m) => setMapView(() => m.default))
+  }, [mode, scene.pulse])
 
   return (
     <div className="map-wrap">
@@ -95,7 +118,7 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
       </div>
       <div className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`} ref={hostRef} />
       <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
-        {mode === 'map' && MapView && (
+        {MapView && (mode === 'map' || scene.pulse) && (
           <MapView
             events={events}
             assets={assets}
@@ -103,6 +126,9 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
             onSelect={onSelect}
             showRadiusFor={showRadiusFor}
             timeMode={timeMode}
+            scene={scene}
+            highlightAssetId={highlightAssetId}
+            active={mode === 'map'}
           />
         )}
       </div>
@@ -117,7 +143,6 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
             type="button"
             onClick={() => {
               setMode('map')
-              import('./MapView.jsx').then((m) => setMapView(() => m.default))
             }}
           >
             Open Streets
@@ -131,10 +156,7 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
         </button>
         <button
           className={mode === 'map' ? 'active' : ''}
-          onClick={() => {
-            setMode('map')
-            import('./MapView.jsx').then((m) => setMapView(() => m.default))
-          }}
+          onClick={() => setMode('map')}
         >
           Streets
         </button>
@@ -273,7 +295,7 @@ function createWorld(el, getOnSelect) {
   resize()
   tick()
 
-  const setData = ({ events, assets, showRadiusFor, acked }) => {
+  const setData = ({ events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId }) => {
     while (overlay.children.length) {
       const child = overlay.children[0]
       overlay.remove(child)
@@ -287,17 +309,33 @@ function createWorld(el, getOnSelect) {
     const fence = assets.find((a) => a.id === showRadiusFor)
 
     for (const a of assets) {
-      overlay.add(htmlPin(a.coords[1], a.coords[0], assetMarkerHtml(a), () => getOnSelect()?.({ type: 'asset', id: a.id })))
+      overlay.add(
+        htmlPin(
+          a.coords[1],
+          a.coords[0],
+          assetMarkerHtml(a),
+          () => getOnSelect()?.({ type: 'asset', id: a.id }),
+          highlightAssetId === a.id ? 'is-hot' : '',
+        ),
+      )
     }
     if (fence) {
       overlay.add(fenceRing(fence.coords[1], fence.coords[0], fence.radiusKm, 0xc4a574))
     }
     for (const e of events) {
       const dim = seen.has(e.id)
-      overlay.add(htmlPin(e.coords[1], e.coords[0], eventMarkerHtml(e), () => getOnSelect()?.({ type: 'event', id: e.id })))
+      overlay.add(
+        htmlPin(
+          e.coords[1],
+          e.coords[0],
+          eventMarkerHtml(e),
+          () => getOnSelect()?.({ type: 'event', id: e.id }),
+          pulseEventId === e.id ? 'is-pulse' : '',
+        ),
+      )
       overlay.add(dot(e.coords[1], e.coords[0], colorFor(e), dim ? 0.28 : 1))
-      if (!dim && (e.impact === 'high' || e.kind === 'fire' || e.kind === 'quake')) {
-        overlay.add(ring(e.coords[1], e.coords[0], e.kind === 'quake' ? 10 : 5.5, colorFor(e)))
+      if (!dim && (e.impact === 'high' || e.kind === 'fire' || e.kind === 'quake' || pulseEventId === e.id)) {
+        overlay.add(ring(e.coords[1], e.coords[0], pulseEventId === e.id ? 14 : e.kind === 'quake' ? 10 : 5.5, colorFor(e)))
       }
       if (e.linked && !dim) {
         overlay.add(
@@ -368,10 +406,10 @@ function latLngToVec3(lat, lng, alt = 0) {
   )
 }
 
-function htmlPin(lat, lng, html, onClick) {
+function htmlPin(lat, lng, html, onClick, extraClass = '') {
   const wrap = document.createElement('button')
   wrap.type = 'button'
-  wrap.className = 'globe-pin'
+  wrap.className = `globe-pin ${extraClass}`.trim()
   wrap.innerHTML = html
   wrap.onclick = (e) => {
     e.stopPropagation()

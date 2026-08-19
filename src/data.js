@@ -497,3 +497,30 @@ export const INCOMING = [
     eventAt: Date.now(),
   },
 ]
+
+/** Rough Andheri–BKC inundation blob for the Mumbai flood demo (not official hydrology). */
+export const MUMBAI_FLOOD_ZONE = {
+  type: 'Feature',
+  properties: { id: 'zone-flood-mum', name: 'Central Mumbai inundation' },
+  geometry: {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [72.848, 19.118],
+        [72.872, 19.128],
+        [72.896, 19.118],
+        [72.908, 19.098],
+        [72.902, 19.072],
+        [72.882, 19.058],
+        [72.858, 19.062],
+        [72.842, 19.082],
+        [72.848, 19.118],
+      ],
+    ],
+  },
+}
+
+export const DEMO = {
+  eventId: 'ev-flood-mum',
+  assetId: 'ast-mum-wh',
+}
