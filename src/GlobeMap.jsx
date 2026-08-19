@@ -5,6 +5,7 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 import { eventMarkerHtml, assetMarkerHtml } from './markers'
 
 const R = 100
+const GLOBE_HOME = { lat: 20, lng: 78, alt: 3.1 }
 
 export default function GlobeMap({
   events,
@@ -107,6 +108,10 @@ export default function GlobeMap({
     import('./MapView.jsx').then((m) => setMapView(() => m.default))
   }, [])
 
+  const zoomOutGlobe = () => {
+    worldRef.current?.zoomOut()
+  }
+
   return (
     <div className={`map-wrap ${mode === 'map' ? 'is-streets' : ''}`}>
       <div className="hud-frame" aria-hidden="true">
@@ -157,6 +162,14 @@ export default function GlobeMap({
           Streets
         </button>
       </div>
+
+      {mode === 'globe' && status === 'live' && (
+        <div className="globe-tools">
+          <button type="button" className="terrain-btn" onClick={zoomOutGlobe}>
+            Zoom out
+          </button>
+        </div>
+      )}
 
       {mode === 'globe' && (
         <>
@@ -348,13 +361,12 @@ function createWorld(el, getOnSelect) {
     return { lat, lng, alt }
   }
 
-  const flyTo = (lat, lng, close = false) => {
+  const animateCamera = (dest, duration = 1200) => {
     controls.autoRotate = false
-    const dest = latLngToVec3(lat, lng, close ? 0.38 : 1.35)
     const start = camera.position.clone()
     const t0 = performance.now()
     const step = () => {
-      const t = Math.min(1, (performance.now() - t0) / 1400)
+      const t = Math.min(1, (performance.now() - t0) / duration)
       const k = 1 - (1 - t) ** 3
       camera.position.lerpVectors(start, dest, k)
       camera.lookAt(0, 0, 0)
@@ -363,11 +375,20 @@ function createWorld(el, getOnSelect) {
     step()
   }
 
+  const flyTo = (lat, lng, close = false) => {
+    animateCamera(latLngToVec3(lat, lng, close ? 0.38 : 1.35), 1400)
+  }
+
+  const zoomOut = () => {
+    animateCamera(latLngToVec3(GLOBE_HOME.lat, GLOBE_HOME.lng, GLOBE_HOME.alt))
+  }
+
   return {
     setData,
     resize,
     pointOfView,
     flyTo,
+    zoomOut,
     setAutoRotate: (on) => {
       controls.autoRotate = on
     },
