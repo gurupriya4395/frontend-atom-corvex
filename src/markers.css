@@ -186,18 +186,31 @@
   pointer-events: auto;
 }
 .ev-callout {
-  min-width: 108px;
-  max-width: 168px;
-  margin-top: 2px;
-  padding: 6px 8px;
+  min-width: 120px;
+  max-width: 176px;
+  margin-top: 4px;
+  padding: 8px 10px 8px 8px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid #e4e7ff;
+  border-radius: 12px;
   color: #0f172a;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
-  text-align: center;
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.16);
+  text-align: left;
   pointer-events: none;
+  display: grid;
+  grid-template-columns: 8px 1fr;
+  gap: 0 8px;
 }
+.ev-callout::before {
+  content: '';
+  grid-row: 1 / span 3;
+  width: 8px;
+  border-radius: 6px;
+  background: #6366F1;
+}
+.ev-callout.sev-high::before { background: #F97316; }
+.ev-callout.sev-medium::before { background: #EC4899; }
+.ev-callout.sev-low::before { background: #22C55E; }
 .ev-callout em {
   display: inline-block;
   font-style: normal;
@@ -205,16 +218,15 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: 999px;
-  margin-bottom: 2px;
+  color: #8B5CF6;
 }
 .ev-callout b {
   display: block;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1.15;
+  color: #0f172a;
 }
 .ev-callout span {
   display: block;
@@ -224,15 +236,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ev-callout.sev-high { border-color: #fecaca; }
-.ev-callout.sev-high em { background: #fee2e2; color: #b91c1c; }
-.ev-callout.sev-high b { color: #b91c1c; }
-.ev-callout.sev-medium { border-color: #fde68a; }
-.ev-callout.sev-medium em { background: #fef3c7; color: #b45309; }
-.ev-callout.sev-medium b { color: #b45309; }
-.ev-callout.sev-low { border-color: #bbf7d0; }
-.ev-callout.sev-low em { background: #dcfce7; color: #15803d; }
-.ev-callout.sev-low b { color: #15803d; }
+.ev-callout.sev-high em { color: #F97316; }
+.ev-callout.sev-medium em { color: #EC4899; }
+.ev-callout.sev-low em { color: #22C55E; }
 .terrain-ev.is-selected .ev-callout {
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18);
   border-color: #93c5fd;

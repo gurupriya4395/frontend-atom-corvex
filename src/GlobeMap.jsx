@@ -105,8 +105,8 @@ export default function GlobeMap({
   }, [mode, selected])
 
   useEffect(() => {
-    if (mode === 'map' || scene.pulse) import('./MapView.jsx').then((m) => setMapView(() => m.default))
-  }, [mode, scene.pulse])
+    if (mode === 'map') import('./MapView.jsx').then((m) => setMapView(() => m.default))
+  }, [mode])
 
   return (
     <div className={`map-wrap ${mode === 'map' ? 'is-streets' : ''}`}>
@@ -118,7 +118,7 @@ export default function GlobeMap({
       </div>
       <div className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`} ref={hostRef} />
       <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
-        {MapView && (mode === 'map' || scene.pulse) && (
+        {mode === 'map' && MapView && (
           <MapView
             events={events}
             assets={assets}
