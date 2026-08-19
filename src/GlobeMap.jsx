@@ -120,14 +120,14 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
               import('./MapView.jsx').then((m) => setMapView(() => m.default))
             }}
           >
-            Open terrain map
+            Open Streets
           </button>
         </div>
       )}
 
       <div className="view-toggle">
         <button className={mode === 'globe' ? 'active' : ''} onClick={() => setMode('globe')}>
-          3D Globe
+          World
         </button>
         <button
           className={mode === 'map' ? 'active' : ''}
@@ -136,7 +136,7 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
             import('./MapView.jsx').then((m) => setMapView(() => m.default))
           }}
         >
-          Terrain map
+          Streets
         </button>
       </div>
 
@@ -151,20 +151,18 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
 
       <div className="hud">
         <div className="legend">
-          <h4>{mode === 'globe' ? 'Read' : 'Terrain'}</h4>
+          <h4>{mode === 'globe' ? 'World' : 'Streets'}</h4>
           {mode === 'globe' ? (
             <>
-              <div className="lg">Places stay on their city</div>
-              <div className="lg">Dashed ring = site fence</div>
-              <div className="lg">Arc = event → asset</div>
+              <div className="lg">Arc = event → site</div>
+              <div className="lg">Dashed ring = fence</div>
               <div className="lg">Drag to look around</div>
             </>
           ) : (
             <>
-              <div className="lg">Light map · pins stay on site</div>
               <div className="lg">Blue dash = DB HQ fence</div>
-              <div className="lg">Gold dash = selected site</div>
-              <div className="lg">Zoom in for HQ → incident time</div>
+              <div className="lg">Chip = HQ → incident time</div>
+              <div className="lg">Zoom in on Live / Forecast</div>
             </>
           )}
         </div>

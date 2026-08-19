@@ -13,6 +13,7 @@ export default function SideRail({
   log,
   acked,
   onPickSite,
+  siteFilterId,
 }) {
   const atRisk = assets.filter((a) =>
     allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert && !acked?.has(e.id)),
@@ -27,6 +28,12 @@ export default function SideRail({
   const mixTotal = Math.max(1, mix.geopolitical + mix.environmental + mix.security)
   const utc = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' })
   const loc = now.toLocaleTimeString('en-GB', { hour12: false })
+
+  const ranked = [...assets].sort((a, b) => {
+    const hotA = allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert && !acked?.has(e.id))
+    const hotB = allEvents.some((e) => e.linked && e.primary.asset.id === b.id && e.alert && !acked?.has(e.id))
+    return Number(hotB) - Number(hotA)
+  })
 
   return (
     <aside className="rail">
@@ -44,7 +51,7 @@ export default function SideRail({
       <div className="kpis">
         <div className="kpi">
           <em>{live}</em>
-          <span>Live signals</span>
+          <span>Live</span>
         </div>
         <div className="kpi warn">
           <em>{atRisk}</em>
@@ -57,7 +64,7 @@ export default function SideRail({
       </div>
 
       <div className="mix">
-        <span className="stamp">Mix · {filteredCount} on globe</span>
+        <span className="stamp">On map · {filteredCount}</span>
         <div className="mix-bar">
           <i className="geo" style={{ width: `${(mix.geopolitical / mixTotal) * 100}%` }} />
           <i className="env" style={{ width: `${(mix.environmental / mixTotal) * 100}%` }} />
@@ -72,52 +79,76 @@ export default function SideRail({
 
       <div className="src">
         <span className="live-dot" />
-        ATOM-CORVEX link
+        ATOM-CORVEX
         <b>{latencyMs} ms</b>
       </div>
 
-      <div className="toggle" onClick={onAffects} role="button" tabIndex={0}>
+      <div
+        className="toggle"
+        onClick={onAffects}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onAffects()
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
         <strong>Near our sites</strong>
         <div className={`switch ${affectsOnly ? 'on' : ''}`}>
           <i />
         </div>
       </div>
 
-      <label>Desk</label>
-      <div className="chip-rows">
-        {Object.keys(cats).map((k) => (
-          <button
-            key={k}
-            className={`fchip ${cats[k] ? 'on' : ''}`}
-            onClick={() => setCats((c) => ({ ...c, [k]: !c[k] }))}
-          >
-            {k}
-            <em>{mix[k] || 0}</em>
-          </button>
-        ))}
-      </div>
-      <label>Weight</label>
-      <div className="chip-rows">
-        {Object.keys(sevs).map((k) => (
-          <button
-            key={k}
-            className={`fchip ${k} ${sevs[k] ? 'on' : ''}`}
-            onClick={() => setSevs((s) => ({ ...s, [k]: !s[k] }))}
-          >
-            {k}
-          </button>
-        ))}
+      <div className="filters">
+        <div>
+          <label>Desk</label>
+          <div className="chip-rows">
+            {Object.keys(cats).map((k) => (
+              <button
+                key={k}
+                className={`fchip ${cats[k] ? 'on' : ''}`}
+                onClick={() => setCats((c) => ({ ...c, [k]: !c[k] }))}
+              >
+                {k}
+                <em>{mix[k] || 0}</em>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label>Weight</label>
+          <div className="chip-rows">
+            {Object.keys(sevs).map((k) => (
+              <button
+                key={k}
+                className={`fchip ${k} ${sevs[k] ? 'on' : ''}`}
+                onClick={() => setSevs((s) => ({ ...s, [k]: !s[k] }))}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <label>Sites</label>
       <ul className="asset-live">
-        {assets.map((a) => {
+        {ranked.map((a) => {
           const hits = allEvents.filter((e) => e.linked && e.primary.asset.id === a.id)
-          const hot = hits.some((e) => e.alert && !acked?.has(e.id))
+          const hot = hits.find((e) => e.alert && !acked?.has(e.id))
           return (
-            <li key={a.id} className={hot ? 'hot' : ''} onClick={() => onPickSite?.(a.id)}>
+            <li
+              key={a.id}
+              className={`${hot ? 'hot' : ''} ${siteFilterId === a.id ? 'on' : ''}`}
+              onClick={() => onPickSite?.(a.id)}
+            >
               <span className={`status-dot ${hot ? 'hot' : ''}`} />
-              <span className="an">{a.name}</span>
+              <span className="an">
+                {a.name}
+                {hot && <em>{hot.primary.km.toFixed(1)} km · {hot.kind}</em>}
+              </span>
               <b>{hits.length}</b>
             </li>
           )

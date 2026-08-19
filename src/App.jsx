@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import EventDetail from './EventDetail'
 import SideRail from './SideRail'
 import { ASSETS, EVENTS, INCOMING } from './data'
-import { enrich, clock } from './scoring'
+import { enrich, clock, searchHay, soWhat } from './scoring'
 import './index.css'
 import './markers.css'
 
@@ -21,6 +21,7 @@ export default function App() {
   const [sevs, setSevs] = useState({ high: true, medium: true, low: true })
   const [selectedId, setSelectedId] = useState(null)
   const [selectedAssetId, setSelectedAssetId] = useState(null)
+  const [siteFilterId, setSiteFilterId] = useState(null)
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [acked, setAcked] = useState(() => new Set())
   const [boot, setBoot] = useState(true)
@@ -29,6 +30,9 @@ export default function App() {
   const [log, setLog] = useState(['Desk open · waiting on ATOM-CORVEX'])
   const [freshId, setFreshId] = useState(null)
   const [toast, setToast] = useState(null)
+  const [cue, setCue] = useState(null)
+  const searchRef = useRef(null)
+  const cueTimers = useRef([])
 
   useEffect(() => {
     const t = setTimeout(() => setBoot(false), 1800)
@@ -85,16 +89,21 @@ export default function App() {
 
   const timed = enriched.filter((e) => {
     if (timeMode === 'forecast') return e.forecast || e.eventAt > Date.now()
-    if (timeMode === 'history') return e.publishedAt < Date.now() - 6 * 3600 * 1000 && !e.forecast
+    if (timeMode === 'history') return e.publishedAt < Date.now() - 4 * 3600 * 1000 && !e.forecast
     return !e.forecast
   })
 
+  const needle = q.trim().toLowerCase()
+  const catsOn = Object.values(cats).some(Boolean)
+  const sevsOn = Object.values(sevs).some(Boolean)
+
   const filtered = timed.filter((e) => {
-    if (!cats[e.category]) return false
-    if (!sevs[e.severity]) return false
-    if (q && !`${e.title} ${e.place} ${e.domain}`.toLowerCase().includes(q.toLowerCase())) return false
-    if (feedMode === 'proximity' || affectsOnly) return e.linked
+    if (!cats[e.category] || !sevs[e.severity]) return false
+    if (needle && !searchHay(e).includes(needle)) return false
+    if (siteFilterId) return e.linked && e.primary.asset.id === siteFilterId
     if (feedMode === 'watchlist') return e.alert || e.impact === 'high'
+    if (feedMode === 'proximity') return e.linked
+    if (affectsOnly) return e.linked
     return true
   })
 
@@ -113,36 +122,94 @@ export default function App() {
         : null
   const alerts = enriched.filter((e) => e.alert && !acked.has(e.id))
   const showRadius = selectedEvent?.linked ? selectedEvent.primary.asset.id : selectedAssetId
+  const siteName = siteFilterId ? ASSETS.find((a) => a.id === siteFilterId)?.name : null
+
+  const emptyHint = (() => {
+    if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
+    if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
+    if (timeMode === 'history') return 'Nothing older than 4h in this desk cut. Switch to Live.'
+    if (timeMode === 'forecast') return 'No forecast items in this cut.'
+    if (siteFilterId) return `No live hits on ${siteName}. Open Geo or pick another site.`
+    if (feedMode === 'proximity') return 'Nothing near our sites. Open Geo, or switch off “Near our sites”.'
+    if (feedMode === 'watchlist') return 'No watch alerts in this cut.'
+    return 'Nothing in this cut.'
+  })()
 
   const pickEvent = (id) => {
     setSelectedId(id)
     setSelectedAssetId(null)
+    setSiteFilterId(null)
     setPage('operations')
   }
 
   const pickAsset = (id) => {
     setSelectedAssetId(id)
     setSelectedId(null)
+    setSiteFilterId(id)
     setPage('operations')
     setAffectsOnly(false)
     setFeedMode('geographical')
   }
 
+  const clearCueTimers = () => {
+    cueTimers.current.forEach(clearTimeout)
+    cueTimers.current = []
+  }
+
   const runDesk = () => {
+    clearCueTimers()
     setPage('operations')
     setTimeMode('live')
     setFeedMode('proximity')
     setAffectsOnly(true)
+    setSiteFilterId(null)
     setAlertsOpen(false)
+    setCue('1 · Prox · Mumbai flood on the warehouse')
     pickEvent('ev-flood-mum')
-    window.setTimeout(() => pickEvent('ev-fire-thane'), 2400)
-    window.setTimeout(() => setAlertsOpen(true), 4800)
+    cueTimers.current.push(
+      window.setTimeout(() => {
+        setCue('2 · Open Streets · Thane fire · HQ time')
+        pickEvent('ev-fire-thane')
+      }, 2400),
+    )
+    cueTimers.current.push(
+      window.setTimeout(() => {
+        setCue('3 · Ack the bell to clear the alert')
+        setAlertsOpen(true)
+      }, 4800),
+    )
+    cueTimers.current.push(window.setTimeout(() => setCue(null), 9000))
   }
 
   const ack = (id) => {
-    setAcked((s) => new Set(s).add(id))
+    const next = new Set(acked).add(id)
+    const left = enriched.filter((e) => e.alert && !next.has(e.id)).length
+    setAcked(next)
     setAlertsOpen(false)
+    setToast({ title: left ? `Bell · ${left} still open` : 'Bell clear', place: 'Acknowledged' })
   }
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
+      if (e.key === '/' && !typing) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+      if (e.key === 'Escape') {
+        setSelectedId(null)
+        setAlertsOpen(false)
+        setCue(null)
+        searchRef.current?.blur()
+      }
+      if ((e.key === 'r' || e.key === 'R') && !typing && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        runDesk()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [enriched])
 
   return (
     <div className="app">
@@ -182,9 +249,22 @@ export default function App() {
           <button className="ghost run-desk" type="button" onClick={runDesk}>
             Run desk
           </button>
-          <input className="search" placeholder="Search a city or event" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input
+            ref={searchRef}
+            className="search"
+            placeholder="Search city, HQ, flood…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
+            }}
+          />
           <span className="stamp">{clock(now.getTime())}</span>
-          <button className={`bell ${alerts.length ? 'has' : ''} ${alertsOpen ? 'open' : ''}`} onClick={() => setAlertsOpen((v) => !v)} aria-label="Alerts">
+          <button
+            className={`bell ${alerts.length ? 'has' : ''} ${alertsOpen ? 'open' : ''}`}
+            onClick={() => setAlertsOpen((v) => !v)}
+            aria-label="Alerts"
+          >
             {alerts.length > 0 && <span className="n">{alerts.length}</span>}
             ▴
           </button>
@@ -193,23 +273,27 @@ export default function App() {
 
       {alertsOpen && (
         <div className="alerts-pop">
-          <header>Still open</header>
+          <header>
+            Still open <em>{alerts.length}</em>
+          </header>
           {alerts.length === 0 && <div className="empty">All quiet. Acknowledged alerts drop off the bell.</div>}
           {alerts.map((a) => (
-            <button
-              key={a.id}
-              className="item"
-              onClick={() => {
-                pickEvent(a.id)
-                setAlertsOpen(false)
-              }}
-            >
-              <strong>{a.impact?.toUpperCase()}</strong>
-              <div>{a.title}</div>
-              <div className="stamp">
-                {a.linked ? `${a.primary.asset.name} · ${a.primary.km.toFixed(1)} km` : 'unlinked'}
-              </div>
-            </button>
+            <div key={a.id} className="alert-row">
+              <button
+                className="item"
+                onClick={() => {
+                  pickEvent(a.id)
+                  setAlertsOpen(false)
+                }}
+              >
+                <strong>{(a.impact || 'alert').toUpperCase()}</strong>
+                <div className="so-line">{soWhat(a).line}</div>
+                <div className="stamp">{a.title}</div>
+              </button>
+              <button className="ack-mini" type="button" onClick={() => ack(a.id)}>
+                Ack
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -219,19 +303,25 @@ export default function App() {
           <header className="assets-head">
             <div>
               <h2>Registered sites</h2>
-              <p className="stamp">Click a site to throw the fence on the globe.</p>
+              <p className="stamp">Exposure on the book — click a site to throw its fence and filter the desk.</p>
             </div>
-            <span className="stamp">{ASSETS.length} assets on the book</span>
+            <span className="stamp">{ASSETS.length} assets</span>
           </header>
           <div className="site-grid">
             {ASSETS.map((a) => {
               const hits = enriched.filter((e) => e.linked && e.primary.asset.id === a.id)
-              const hot = hits.some((e) => e.alert && !acked.has(e.id))
+              const hot = hits.find((e) => e.alert && !acked.has(e.id))
               return (
                 <article
                   key={a.id}
                   className={`site-card ${hot ? 'hot' : ''}`}
                   onClick={() => pickAsset(a.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      pickAsset(a.id)
+                    }
+                  }}
                   role="button"
                   tabIndex={0}
                 >
@@ -247,6 +337,13 @@ export default function App() {
                     <p>
                       {a.city}, {a.country}
                     </p>
+                    {hot ? (
+                      <p className="site-hotline">
+                        {hot.kind} · {hot.primary.km.toFixed(1)} km · {hot.title}
+                      </p>
+                    ) : (
+                      <p className="site-hotline quiet">Quiet — no open alert</p>
+                    )}
                     <div className="site-stats">
                       <span>
                         Fence <b>{a.radiusKm} km</b>
@@ -290,8 +387,15 @@ export default function App() {
             setSevs={setSevs}
             affectsOnly={affectsOnly}
             onAffects={() => {
-              setAffectsOnly((v) => !v)
-              setFeedMode((m) => (m === 'proximity' && affectsOnly ? 'geographical' : m))
+              setAffectsOnly((v) => {
+                const next = !v
+                setFeedMode((m) => {
+                  if (next) return 'proximity'
+                  if (m === 'proximity') return 'geographical'
+                  return m
+                })
+                return next
+              })
             }}
             allEvents={enriched}
             assets={ASSETS}
@@ -300,6 +404,7 @@ export default function App() {
             log={log}
             acked={acked}
             onPickSite={pickAsset}
+            siteFilterId={siteFilterId}
           />
 
           <EventFeed
@@ -307,6 +412,7 @@ export default function App() {
             mode={feedMode}
             onMode={(m) => {
               setFeedMode(m)
+              setSiteFilterId(null)
               if (m === 'proximity') setAffectsOnly(true)
               if (m === 'geographical') setAffectsOnly(false)
             }}
@@ -316,7 +422,12 @@ export default function App() {
             counts={counts}
             freshId={freshId}
             acked={acked}
+            timeMode={timeMode}
+            siteName={siteName}
+            emptyHint={emptyHint}
           />
+
+          {cue && <div className="desk-cue">{cue}</div>}
 
           {toast && (
             <div className="wire-toast">
@@ -356,12 +467,7 @@ export default function App() {
       )}
 
       {page === 'operations' && selectedEvent && (
-        <EventDetail
-          event={selectedEvent}
-          onClose={() => setSelectedId(null)}
-          acknowledged={acked}
-          onAck={ack}
-        />
+        <EventDetail event={selectedEvent} onClose={() => setSelectedId(null)} acknowledged={acked} onAck={ack} />
       )}
     </div>
   )

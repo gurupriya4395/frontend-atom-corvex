@@ -202,6 +202,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(0.3),
     eventAt: hoursAgo(0.4),
+    why: 'Last-mile trucks held at the Mumbai Warehouse gate.',
     updates: [
       { at: hoursAgo(0.4), text: 'Red alert · Andheri East ponding' },
       { at: hoursAgo(0.25), text: 'Last-mile trucks held at the warehouse gate' },
@@ -222,6 +223,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(0.15),
     eventAt: hoursAgo(0.2),
+    why: 'Downwind plume toward the warehouse belt — secondary-blast watch.',
     updates: [
       { at: hoursAgo(0.2), text: 'Plume visible from Mumbai–Nashik highway' },
       { at: hoursAgo(0.12), text: 'Solvent bays adjacent · secondary-blast watch' },
@@ -242,6 +244,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(1.1),
     eventAt: hoursAgo(1.4),
+    why: 'Local roadblocks only — no spillover toward Mumbai or Pune assets.',
   },
   {
     id: 'ev-storm-che',
@@ -258,6 +261,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(2.2),
     eventAt: hoursAgo(2.5),
+    why: 'Inspect Chennai Plant drainage; night contractor shifts likely cancelled.',
   },
   {
     id: 'ev-sec-ggm',
@@ -274,6 +278,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(0.7),
     eventAt: hoursAgo(0.85),
+    why: 'Gurugram HQ perimeters raised after shots fired on the CIT corridor.',
     updates: [{ at: hoursAgo(0.7), text: 'Campus perimeters raised · no casualties filed' }],
   },
   {
@@ -291,6 +296,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(4),
     eventAt: hoursAgo(4.2),
+    why: 'No ATOM site in radius — regional awareness only.',
   },
   {
     id: 'ev-unrest-ist',
@@ -307,6 +313,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(3.3),
     eventAt: hoursAgo(3.5),
+    why: 'No registered ATOM site in Turkey in this POC set.',
   },
   {
     id: 'ev-haze-sin',
@@ -323,6 +330,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(5),
     eventAt: hoursAgo(5),
+    why: 'Singapore Hub indoor-normal; outdoor holds if PSI turns unhealthy.',
   },
   {
     id: 'ev-strike-lon',
@@ -340,6 +348,7 @@ export const EVENTS = [
     publishedAt: hoursAgo(6),
     eventAt: daysAhead(2),
     forecast: true,
+    why: 'Forecast commute hit for London Office — facility is not a target.',
   },
   {
     id: 'ev-flood-dxb',
@@ -356,6 +365,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(1.8),
     eventAt: hoursAgo(2),
+    why: 'Dubai Logistics gate delays 45–90 minutes while underpasses pond.',
   },
   {
     id: 'ev-fire-cal',
@@ -372,6 +382,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(8),
     eventAt: hoursAgo(9),
+    why: 'No western-US ATOM asset in this sample — Geo feed only.',
   },
   {
     id: 'ev-rally-pune',
@@ -389,6 +400,7 @@ export const EVENTS = [
     publishedAt: hoursAgo(9),
     eventAt: daysAhead(1),
     forecast: true,
+    why: 'Licensed march passes 2.1 km from Pune Office — traffic and access, not violence.',
   },
   {
     id: 'ev-protest-fra',
@@ -405,6 +417,7 @@ export const EVENTS = [
     source: 'ATOM-CORVEX',
     publishedAt: hoursAgo(0.5),
     eventAt: hoursAgo(0.55),
+    why: 'Frankfurt HQ sits inside the Bankenviertel disruption radius.',
   },
   {
     id: 'ev-flood-nyc',
@@ -422,6 +435,7 @@ export const EVENTS = [
     publishedAt: hoursAgo(3),
     eventAt: daysAhead(1),
     forecast: true,
+    why: 'Forecast pedestrian slowdown at Deutsche Bank Center next tide cycle.',
   },
 ]
 
@@ -441,6 +455,7 @@ export const INCOMING = [
     domain: 'Natural Disasters',
     title: 'Water overtopping bunds along Kochi backwaters',
     summary: 'Local administration reports sluice overflow. No ATOM asset inside radius; logged on geographical feed.',
+    why: 'No ATOM asset inside radius — log on Geographical only.',
     place: 'Kochi, Kerala, India',
     flag: 'IN',
     coords: [76.2673, 9.9312],
@@ -456,6 +471,7 @@ export const INCOMING = [
     domain: 'Crime',
     title: 'Cargo-yard intrusion attempt, Jebel Ali free zone',
     summary: 'Perimeter alarm then visual confirm. Patrol intercept. Dubai Logistics sits 11 km north — watchlist.',
+    why: 'Dubai Logistics sits 11 km north — watch the fence.',
     place: 'Jebel Ali, Dubai, UAE',
     flag: 'AE',
     coords: [55.027, 24.985],
@@ -471,6 +487,7 @@ export const INCOMING = [
     domain: 'Environment',
     title: 'AQI spike after stubble plume, NCR western corridor',
     summary: 'Hourly AQI crossing 320 at a roadside station. Gurugram HQ indoor-normal; outdoor contractor holds.',
+    why: 'Gurugram HQ indoor-normal; hold outdoor contractors.',
     place: 'Gurugram, Haryana, India',
     flag: 'IN',
     coords: [77.04, 28.47],

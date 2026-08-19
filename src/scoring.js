@@ -77,6 +77,50 @@ export function correlate(event, assets) {
   return { linked: true, hits, primary, impact, raw, factors, alert }
 }
 
+export function soWhat(event) {
+  if (!event.linked) {
+    return {
+      verdict: 'awareness',
+      line: 'Off our map · awareness only',
+      why: event.why || 'No registered site sits inside this radius.',
+      scoreWhy: 'No score — the event is not correlated to a registered asset.',
+    }
+  }
+  const fence = event.primary.inside ? 'inside fence' : 'outside fence'
+  const impact = event.impact || 'low'
+  return {
+    verdict: event.alert ? 'alert' : 'on-us',
+    line: `${impact.toUpperCase()} · ${event.primary.asset.name} · ${event.primary.km.toFixed(1)} km · ${fence}`,
+    why: event.why || `Impact on ${event.primary.asset.name} at ${event.primary.km.toFixed(1)} km.`,
+    scoreWhy: `${impact === 'high' ? 'High' : impact === 'medium' ? 'Medium' : 'Low'} because: ${event.severity} severity × ${event.primary.asset.criticality}-criticality site × ${event.primary.km.toFixed(1)} km inside a ${event.primary.asset.radiusKm} km fence.`,
+  }
+}
+
+export function hqLine(event) {
+  if (!event.db) return null
+  const side = event.db.inside ? 'inside HQ fence' : 'outside HQ fence'
+  return `${event.db.hq.name} · ${event.db.km.toFixed(1)} km · ${event.db.travel.label} · ${side}`
+}
+
+export function searchHay(event) {
+  return [
+    event.title,
+    event.place,
+    event.domain,
+    event.kind,
+    event.category,
+    event.why,
+    event.primary?.asset?.name,
+    event.primary?.asset?.city,
+    event.db?.hq?.name,
+    event.db?.hq?.city,
+    event.db ? `DB ${event.db.hq.city}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
 export function enrich(events, assets) {
   const hqs = assets.filter((a) => a.org === 'deutsche-bank')
   return events.map((ev) => {
