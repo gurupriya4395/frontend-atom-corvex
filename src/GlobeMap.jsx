@@ -335,10 +335,6 @@ function createWorld(el, getOnSelect) {
           pulseEventId === e.id ? 'is-pulse' : '',
         ),
       )
-      overlay.add(dot(e.coords[1], e.coords[0], colorFor(e), 1))
-      if (e.impact === 'high' || e.kind === 'fire' || e.kind === 'quake' || pulseEventId === e.id) {
-        overlay.add(ring(e.coords[1], e.coords[0], pulseEventId === e.id ? 14 : e.kind === 'quake' ? 10 : 5.5, colorFor(e)))
-      }
       if (e.linked) {
         overlay.add(
           arc(
@@ -428,30 +424,6 @@ function htmlPin(lat, lng, html, onClick, extraClass = '') {
   const obj = new CSS2DObject(wrap)
   obj.position.copy(latLngToVec3(lat, lng, 0.02))
   return obj
-}
-
-function dot(lat, lng, color, opacity = 1) {
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.7, 10, 10),
-    new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity }),
-  )
-  mesh.position.copy(latLngToVec3(lat, lng, 0.01))
-  return mesh
-}
-
-function ring(lat, lng, size, color) {
-  const g = new THREE.RingGeometry(size * 0.55, size, 48)
-  const m = new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity: 0.35,
-    side: THREE.DoubleSide,
-  })
-  const mesh = new THREE.Mesh(g, m)
-  const p = latLngToVec3(lat, lng, 0.012)
-  mesh.position.copy(p)
-  mesh.lookAt(0, 0, 0)
-  return mesh
 }
 
 function arc(lat0, lng0, lat1, lng1, color) {
@@ -572,13 +544,4 @@ function darken(hex, amt) {
   const g = Math.max(0, ((n >> 8) & 255) - amt)
   const b = Math.max(0, (n & 255) - amt)
   return `rgb(${r}, ${g}, ${b})`
-}
-
-function colorFor(e) {
-  if (e.kind === 'fire') return 0xff4d12
-  if (e.kind === 'flood') return 0x3ce0c8
-  if (e.kind === 'storm') return 0x9bb4ff
-  if (e.kind === 'security') return 0xff4d78
-  if (e.kind === 'protest') return 0xe8c36a
-  return 0xc4a574
 }

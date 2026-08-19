@@ -19,19 +19,19 @@ export function assetMarkerHtml(asset) {
 function inner(kind) {
   switch (kind) {
     case 'fire':
-      return `<span class="flame"><i></i><i></i><i></i></span><span class="glow"></span>`
+      return `<span class="flame"><i></i></span>`
     case 'flood':
-      return `<span class="ripples"><i></i><i></i><i></i></span><span class="drop"></span>`
+      return `<span class="drop"></span>`
     case 'storm':
       return `<span class="cyclone"><svg viewBox="0 0 64 64"><path d="M32 8c8 6 14 10 18 18 3 7-1 14-8 16-9 3-16-2-18-10-1-6 3-10 8-11 4 0 6 3 6 6 0 2-1 4-4 4"/></svg></span>`
     case 'protest':
       return `<span class="crowd"><i></i><i></i><i></i></span>`
     case 'quake':
-      return `<span class="shock"><i></i><i></i><i></i></span>`
+      return `<span class="quake-dot"></span>`
     case 'security':
-      return `<span class="siren"><i></i><b></b></span>`
+      return `<span class="siren"><i></i></span>`
     case 'haze':
-      return `<span class="smoke"><i></i><i></i><i></i></span>`
+      return `<span class="smoke"><i></i></span>`
     default:
       return `<span class="dot"></span>`
   }
