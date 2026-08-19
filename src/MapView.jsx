@@ -130,9 +130,10 @@ export default function MapView({
     })
 
     events.forEach((event) => {
+      const isSelected = selected?.type === 'event' && selected.id === event.id
       const el = document.createElement('div')
-      el.className = `terrain-ev${selected?.type === 'event' && selected.id === event.id ? ' is-selected' : ''}`
-      el.innerHTML = eventMarkerHtml(event) + eventCalloutHtml(event)
+      el.className = `terrain-ev${isSelected ? ' is-selected' : ''}`
+      el.innerHTML = eventMarkerHtml(event) + (isSelected ? eventCalloutHtml(event) : '')
       el.style.cursor = 'pointer'
       el.addEventListener('click', (e) => {
         e.stopPropagation()

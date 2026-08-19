@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import SideRail from './SideRail'
-import ImpactStage from './ImpactStage'
 import { ASSETS, DEMO, EVENTS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
@@ -29,14 +28,12 @@ export default function App() {
   const [log, setLog] = useState(['Desk open · waiting on ATOM-CORVEX'])
   const [freshId, setFreshId] = useState(null)
   const [toast, setToast] = useState(null)
-  const [cue, setCue] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
   const [scene, setScene] = useState({
     pulse: false,
     flood: false,
     warehouse: false,
     distance: false,
-    scoring: false,
   })
   const searchRef = useRef(null)
   const cueTimers = useRef([])
@@ -163,7 +160,7 @@ export default function App() {
   }
 
   const resetScene = () =>
-    setScene({ pulse: false, flood: false, warehouse: false, distance: false, scoring: false })
+    setScene({ pulse: false, flood: false, warehouse: false, distance: false })
 
   const clearCueTimers = () => {
     cueTimers.current.forEach(clearTimeout)
@@ -187,14 +184,12 @@ export default function App() {
     DESK_BEATS.forEach((beat) => {
       cueTimers.current.push(
         window.setTimeout(() => {
-          setCue(beat.cue)
           if (beat.mapMode) setMapMode(beat.mapMode)
           setScene((s) => ({
             pulse: beat.pulse ?? s.pulse,
             flood: beat.flood ?? s.flood,
             warehouse: beat.warehouse ?? s.warehouse,
             distance: beat.distance ?? s.distance,
-            scoring: beat.scoring ?? s.scoring,
           }))
           if (beat.select) pickEvent(DEMO.eventId, { map: beat.mapMode === 'map' })
           if (beat.brief) pickEvent(DEMO.eventId, { map: true })
@@ -214,7 +209,6 @@ export default function App() {
         clearCueTimers()
         resetScene()
         setSelectedId(null)
-        setCue(null)
         searchRef.current?.blur()
       }
       if ((e.key === 'r' || e.key === 'R') && !typing && !e.metaKey && !e.ctrlKey) {
@@ -408,10 +402,6 @@ export default function App() {
             siteName={siteName}
             emptyHint={emptyHint}
           />
-
-          {cue && <div className="desk-cue">{cue}</div>}
-
-          {scene.scoring && selectedEvent && <ImpactStage event={selectedEvent} />}
 
           {toast && (
             <div className="wire-toast">
