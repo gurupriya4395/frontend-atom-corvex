@@ -69,18 +69,19 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
   useEffect(() => {
     const world = worldRef.current
     if (!world) return
-    if (!selected) {
-      world.setAutoRotate(mode === 'globe')
-      return
-    }
-    const target = events.find((e) => e.id === selected.id) || assets.find((a) => a.id === selected.id)
+    world.setAutoRotate(false)
+    if (!selected) return
+    const target =
+      selected.type === 'event'
+        ? events.find((e) => e.id === selected.id)
+        : assets.find((a) => a.id === selected.id)
     if (!target) return
     const close = selected.type === 'asset' || Boolean(showRadiusFor)
     world.flyTo(target.coords[1], target.coords[0], close)
   }, [selected, events, assets, mode, showRadiusFor])
 
   useEffect(() => {
-    worldRef.current?.setAutoRotate(mode === 'globe' && !selected)
+    worldRef.current?.setAutoRotate(false)
     worldRef.current?.setPaused(mode !== 'globe')
   }, [mode, selected])
 
@@ -151,9 +152,10 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
       <div className="hud">
         <div className="legend">
           <h4>{mode === 'globe' ? 'Read' : 'Terrain'}</h4>
+          <div className="lg">Places stay on their city</div>
           <div className="lg">Dashed ring = site fence</div>
           <div className="lg">Arc = event → asset</div>
-          <div className="lg">Drag · scroll altitude</div>
+          <div className="lg">Drag to look around</div>
         </div>
       </div>
     </div>
@@ -162,7 +164,7 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
 
 function createWorld(el, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#03040a')
+  scene.background = new THREE.Color('#d7e6f4')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 40, 280)
@@ -179,14 +181,13 @@ function createWorld(el, getOnSelect) {
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.06
-  controls.autoRotate = true
-  controls.autoRotateSpeed = 0.55
+  controls.autoRotate = false
   controls.minDistance = 130
   controls.maxDistance = 520
   controls.enablePan = false
 
-  scene.add(new THREE.AmbientLight(0xc4b8a4, 1.15))
-  const sun = new THREE.DirectionalLight(0xffe6c8, 1.35)
+  scene.add(new THREE.AmbientLight(0xf4f7fb, 1.35))
+  const sun = new THREE.DirectionalLight(0xfff6e8, 1.55)
   sun.position.set(-120, 80, 160)
   scene.add(sun)
 
@@ -203,19 +204,16 @@ function createWorld(el, getOnSelect) {
   const atmos = new THREE.Mesh(
     new THREE.SphereGeometry(R * 1.045, 48, 32),
     new THREE.MeshBasicMaterial({
-      color: 0x6a8aaa,
+      color: 0x9ec4e8,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.22,
       side: THREE.BackSide,
     }),
   )
   scene.add(atmos)
 
-  const stars = makeStars()
-  scene.add(stars)
-
   const overlay = new THREE.Group()
-  scene.add(overlay)
+  globe.add(overlay)
 
   const loader = new THREE.TextureLoader()
   loader.load(
@@ -236,10 +234,21 @@ function createWorld(el, getOnSelect) {
 
   let raf = 0
   let paused = false
+  const _pinWorld = new THREE.Vector3()
+  const _camDir = new THREE.Vector3()
   const tick = () => {
     raf = requestAnimationFrame(tick)
     if (paused) return
     controls.update()
+    _camDir.copy(camera.position).normalize()
+    overlay.traverse((obj) => {
+      if (!obj.element) return
+      obj.getWorldPosition(_pinWorld)
+      const facing = _pinWorld.normalize().dot(_camDir)
+      const show = facing > 0.12
+      obj.element.style.visibility = show ? 'visible' : 'hidden'
+      obj.element.style.pointerEvents = show ? 'auto' : 'none'
+    })
     renderer.render(scene, camera)
     labels.render(scene, camera)
   }
@@ -305,7 +314,7 @@ function createWorld(el, getOnSelect) {
 
   const flyTo = (lat, lng, close = false) => {
     controls.autoRotate = false
-    const dest = latLngToVec3(lat, lng, close ? 0.2 : 1.35)
+    const dest = latLngToVec3(lat, lng, close ? 0.38 : 1.35)
     const start = camera.position.clone()
     const t0 = performance.now()
     const step = () => {
@@ -430,20 +439,6 @@ function destPoint(lat, lng, km, bearingDeg) {
     lng1 +
     Math.atan2(Math.sin(br) * Math.sin(ang) * Math.cos(lat1), Math.cos(ang) - Math.sin(lat1) * Math.sin(lat2))
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI]
-}
-
-function makeStars() {
-  const n = 600
-  const pos = new Float32Array(n * 3)
-  for (let i = 0; i < n; i++) {
-    const v = new THREE.Vector3().randomDirection().multiplyScalar(700 + Math.random() * 400)
-    pos[i * 3] = v.x
-    pos[i * 3 + 1] = v.y
-    pos[i * 3 + 2] = v.z
-  }
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x8a9bb0, size: 1.15 }))
 }
 
 function paintFallbackEarth() {
