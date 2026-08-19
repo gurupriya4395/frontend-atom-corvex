@@ -237,6 +237,17 @@
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.18);
   border-color: #93c5fd;
 }
+.pin-medium i { background: var(--brass); }
+.pin-low i { background: #6d7a62; }
+.pin b {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #f0e6c8;
+  text-shadow: 0 1px 4px #000;
+  background: rgba(0,0,0,0.55);
+  padding: 1px 4px;
+}
 .terrain-map .pin b {
   color: #1c3144;
   text-shadow: none;
