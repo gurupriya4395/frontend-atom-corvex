@@ -177,7 +177,8 @@
 }
 .pin-db b { color: #9ec9e0; letter-spacing: 0.06em; }
 
-.terrain-ev {
+.terrain-ev,
+.terrain-pin {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -187,13 +188,24 @@
 .hq-time {
   min-width: 148px;
   max-width: 200px;
-  padding: 6px 8px;
-  background: rgba(8, 10, 14, 0.86);
-  border: 1px solid rgba(126, 182, 212, 0.45);
-  color: #efe6d8;
+  padding: 7px 9px;
+  background: rgba(255, 252, 248, 0.94);
+  border: 1px solid rgba(47, 111, 144, 0.28);
+  color: #243240;
   font-size: 10px;
-  line-height: 1.3;
+  line-height: 1.35;
   backdrop-filter: blur(10px);
+  box-shadow: 0 8px 20px rgba(40, 70, 100, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.terrain-map.is-close .hq-time,
+.terrain-ev.is-selected .hq-time {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 .hq-time strong {
   display: block;
@@ -201,18 +213,18 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-size: 11px;
-  color: #7eb6d4;
+  color: #2f6f90;
 }
-.hq-time span { display: block; color: #c8c0b4; }
+.hq-time span { display: block; color: #4d5d6c; }
 .hq-time em {
   display: block;
   font-style: normal;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 9px;
-  color: var(--brass);
+  color: #8a6a3a;
   margin-top: 3px;
 }
-.hq-time.in { border-color: rgba(255, 77, 18, 0.55); }
+.hq-time.in { border-color: rgba(212, 86, 42, 0.55); }
 .hq-time.in em { color: var(--fire); }
 .pin-medium i { background: var(--brass); }
 .pin-low i { background: #6d7a62; }
@@ -225,5 +237,13 @@
   background: rgba(0,0,0,0.55);
   padding: 1px 4px;
 }
+.terrain-map .pin b {
+  color: #1c3144;
+  text-shadow: none;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(80, 120, 150, 0.22);
+  padding: 1px 5px;
+}
+.terrain-map .pin-db b { color: #1a5a7a; }
 
 .maplibregl-marker { cursor: pointer; }

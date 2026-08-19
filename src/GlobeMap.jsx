@@ -152,10 +152,21 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
       <div className="hud">
         <div className="legend">
           <h4>{mode === 'globe' ? 'Read' : 'Terrain'}</h4>
-          <div className="lg">Places stay on their city</div>
-          <div className="lg">Dashed ring = site fence</div>
-          <div className="lg">Arc = event → asset</div>
-          <div className="lg">Drag to look around</div>
+          {mode === 'globe' ? (
+            <>
+              <div className="lg">Places stay on their city</div>
+              <div className="lg">Dashed ring = site fence</div>
+              <div className="lg">Arc = event → asset</div>
+              <div className="lg">Drag to look around</div>
+            </>
+          ) : (
+            <>
+              <div className="lg">Light map · pins stay on site</div>
+              <div className="lg">Blue dash = DB HQ fence</div>
+              <div className="lg">Gold dash = selected site</div>
+              <div className="lg">Zoom in for HQ → incident time</div>
+            </>
+          )}
         </div>
       </div>
     </div>

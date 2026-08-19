@@ -449,8 +449,25 @@ button { cursor: pointer; }
   padding: 9px 18px;
 }
 
-.map-el { position: absolute; inset: 0; }
-.maplibregl-ctrl-attrib { font-size: 9px !important; background: rgba(0,0,0,.45) !important; }
+.map-el { position: absolute; inset: 0; background: #d4e4f4; }
+.map-stage .maplibregl-ctrl-group {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(80, 120, 150, 0.18);
+  box-shadow: 0 8px 22px rgba(40, 70, 100, 0.14);
+}
+.map-stage .maplibregl-ctrl-group button {
+  width: 28px;
+  height: 28px;
+}
+.map-stage .maplibregl-ctrl-attrib {
+  font-size: 9px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: #5a6a7a !important;
+}
+.map-stage .maplibregl-ctrl-bottom-right {
+  right: 332px;
+  bottom: 56px;
+}
 .maplibregl-ctrl-bottom-left { display: none; }
 
 .hud {

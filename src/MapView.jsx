@@ -10,38 +10,39 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
   const markersRef = useRef([])
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+  const dataRef = useRef({ events, assets })
+  dataRef.current = { events, assets }
 
   const liveOrForecast = timeMode === 'live' || timeMode === 'forecast'
 
   useEffect(() => {
     const map = new maplibregl.Map({
       container: wrapRef.current,
-      style: 'https://tiles.openfreemap.org/styles/dark',
-      center: [8.67, 50.11],
-      zoom: 2.2,
-      pitch: 0,
-      bearing: 0,
+      style: 'https://tiles.openfreemap.org/styles/positron',
+      center: [78.0, 21.5],
+      zoom: 3.8,
+      pitch: 38,
+      bearing: -12,
       maxPitch: 80,
       canvasContextAttributes: { antialias: true },
-      projection: { type: 'globe' },
+      attributionControl: false,
     })
     mapRef.current = map
 
+    const syncZoomClass = () => {
+      wrapRef.current?.classList.toggle('is-close', map.getZoom() >= 5.2)
+    }
+
     map.on('load', () => {
       try {
-        map.setProjection({ type: 'globe' })
-      } catch {
-        /* pitched mercator still reads as 3D */
-      }
-      try {
         map.setSky({
-          'sky-color': '#02060c',
-          'sky-horizon-blend': 0.85,
-          'horizon-color': '#1a2430',
-          'horizon-fog-blend': 0.85,
-          'fog-color': '#05080c',
-          'fog-ground-blend': 0.55,
-          'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.8, 5, 0.4, 8, 0],
+          'sky-color': '#d7e6f4',
+          'sky-horizon-blend': 0.72,
+          'horizon-color': '#f4f8fc',
+          'horizon-fog-blend': 0.8,
+          'fog-color': '#e4eef6',
+          'fog-ground-blend': 0.35,
+          'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.55, 5, 0.18, 8, 0],
         })
       } catch {
         /* sky optional */
@@ -53,21 +54,21 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
         type: 'heatmap',
         source: 'pulses',
         paint: {
-          'heatmap-weight': 0.8,
-          'heatmap-intensity': 1.15,
-          'heatmap-radius': 28,
+          'heatmap-weight': 0.75,
+          'heatmap-intensity': 0.95,
+          'heatmap-radius': 26,
           'heatmap-color': [
             'interpolate',
             ['linear'],
             ['heatmap-density'],
             0,
             'rgba(0,0,0,0)',
-            0.2,
-            'rgba(60,224,200,0.15)',
+            0.22,
+            'rgba(90, 180, 210, 0.18)',
             0.5,
-            'rgba(196,165,116,0.25)',
+            'rgba(196, 165, 116, 0.32)',
             0.85,
-            'rgba(255,77,18,0.45)',
+            'rgba(212, 86, 42, 0.42)',
           ],
         },
       })
@@ -77,13 +78,13 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
         id: 'db-fences-fill',
         type: 'fill',
         source: 'db-fences',
-        paint: { 'fill-color': '#3d7ea6', 'fill-opacity': 0.12 },
+        paint: { 'fill-color': '#5a9ec4', 'fill-opacity': 0.16 },
       })
       map.addLayer({
         id: 'db-fences-line',
         type: 'line',
         source: 'db-fences',
-        paint: { 'line-color': '#7eb6d4', 'line-width': 1.3, 'line-dasharray': [2, 2] },
+        paint: { 'line-color': '#2f6f90', 'line-width': 1.6, 'line-dasharray': [2, 2] },
       })
 
       map.addSource('hq-links', { type: 'geojson', data: emptyFc() })
@@ -91,7 +92,7 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
         id: 'hq-links-line',
         type: 'line',
         source: 'hq-links',
-        paint: { 'line-color': '#c4a574', 'line-width': 1.2, 'line-opacity': 0.75 },
+        paint: { 'line-color': '#8a6f4a', 'line-width': 1.4, 'line-opacity': 0.7 },
       })
 
       map.addSource('radius', { type: 'geojson', data: emptyFc() })
@@ -99,18 +100,28 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
         id: 'radius-fill',
         type: 'fill',
         source: 'radius',
-        paint: { 'fill-color': '#c4a574', 'fill-opacity': 0.1 },
+        paint: { 'fill-color': '#c4a574', 'fill-opacity': 0.16 },
       })
       map.addLayer({
         id: 'radius-line',
         type: 'line',
         source: 'radius',
-        paint: { 'line-color': '#c4a574', 'line-width': 1.4, 'line-dasharray': [2, 2] },
+        paint: { 'line-color': '#8a6a3a', 'line-width': 1.7, 'line-dasharray': [2, 2] },
       })
+
+      map.resize()
+      syncZoomClass()
     })
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-left')
+    map.on('zoom', syncZoomClass)
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right')
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
+
+    const ro = new ResizeObserver(() => map.resize())
+    if (wrapRef.current) ro.observe(wrapRef.current)
+
     return () => {
+      ro.disconnect()
       markersRef.current.forEach((m) => m.remove())
       map.remove()
       mapRef.current = null
@@ -126,6 +137,7 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
 
     assets.forEach((asset) => {
       const el = document.createElement('div')
+      el.className = 'terrain-pin'
       el.innerHTML = assetMarkerHtml(asset)
       el.style.cursor = 'pointer'
       el.addEventListener('click', (e) => {
@@ -138,7 +150,7 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
 
     events.forEach((event) => {
       const el = document.createElement('div')
-      el.className = 'terrain-ev'
+      el.className = `terrain-ev${selected?.type === 'event' && selected.id === event.id ? ' is-selected' : ''}`
       el.innerHTML = eventMarkerHtml(event)
       if (liveOrForecast && event.db) {
         const chip = document.createElement('div')
@@ -168,8 +180,8 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
         })
       }
 
-          const hqs = assets.filter((a) => a.org === 'deutsche-bank')
-          const fences = map.getSource('db-fences')
+      const hqs = assets.filter((a) => a.org === 'deutsche-bank')
+      const fences = map.getSource('db-fences')
       if (fences) {
         fences.setData({
           type: 'FeatureCollection',
@@ -221,32 +233,29 @@ export default function MapView({ events, assets, selected, onSelect, showRadius
 
     if (map.isStyleLoaded()) apply()
     else map.once('load', apply)
-  }, [events, assets, showRadiusFor, liveOrForecast])
+  }, [events, assets, showRadiusFor, liveOrForecast, selected?.id, selected?.type])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !selected) return
-    const ev = events.find((e) => e.id === selected.id)
-    const ast = assets.find((a) => a.id === selected.id)
-    const target = ev || ast
+    if (!map || !selected?.id) return
+    const { events: evs, assets: asts } = dataRef.current
+    const target =
+      selected.type === 'event'
+        ? evs.find((e) => e.id === selected.id)
+        : asts.find((a) => a.id === selected.id)
     if (!target) return
-    const zoom = ev ? 11.2 : 9.6
-    try {
-      map.setProjection({ type: zoom > 5 ? 'mercator' : 'globe' })
-    } catch {
-      /* keep current projection */
-    }
+    const zoom = selected.type === 'event' ? 11.2 : 9.6
     map.flyTo({
       center: target.coords,
       zoom,
-      pitch: 62,
-      bearing: ev ? -34 : -16,
-      duration: 2200,
+      pitch: 52,
+      bearing: selected.type === 'event' ? -28 : -12,
+      duration: 1800,
       essential: true,
     })
-  }, [selected, events, assets])
+  }, [selected?.id, selected?.type])
 
-  return <div className="map-el" ref={wrapRef} />
+  return <div className="map-el terrain-map" ref={wrapRef} />
 }
 
 function emptyFc() {
