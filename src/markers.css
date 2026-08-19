@@ -1,0 +1,229 @@
+.haz {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.55));
+}
+.card .haz { width: 40px; height: 40px; }
+
+.impact-high.haz::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 1px solid rgba(255, 77, 18, 0.7);
+  animation: ping 1.6s ease-out infinite;
+}
+@keyframes ping {
+  0% { transform: scale(0.7); opacity: 0.9; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* FIRE */
+.flame {
+  position: relative;
+  width: 18px;
+  height: 28px;
+}
+.flame i {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 10px;
+  height: 22px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  transform: translateX(-50%);
+  background: linear-gradient(#fff6a8, #ffb020 35%, #ff4d12 70%, #7a1200);
+  animation: flicker 0.35s infinite alternate;
+  filter: blur(0.2px);
+}
+.flame i:nth-child(1) { width: 14px; height: 26px; animation-duration: 0.28s; }
+.flame i:nth-child(2) { left: 32%; width: 9px; height: 18px; animation-duration: 0.42s; opacity: 0.85; }
+.flame i:nth-child(3) { left: 68%; width: 8px; height: 16px; animation-duration: 0.22s; }
+@keyframes flicker {
+  from { transform: translateX(-50%) scaleY(1) skewX(-4deg); }
+  to { transform: translateX(-50%) scaleY(1.12) skewX(5deg) translateY(-1px); }
+}
+.haz-fire .glow {
+  position: absolute;
+  width: 38px; height: 38px;
+  background: radial-gradient(circle, rgba(255, 90, 20, 0.55), transparent 70%);
+  animation: glowpulse 1.1s ease-in-out infinite;
+}
+@keyframes glowpulse {
+  50% { transform: scale(1.25); opacity: 0.55; }
+}
+
+/* FLOOD */
+.ripples { position: relative; width: 34px; height: 34px; }
+.ripples i {
+  position: absolute; inset: 6px;
+  border: 2px solid var(--flood);
+  border-radius: 50%;
+  animation: ripple 2s ease-out infinite;
+  opacity: 0;
+}
+.ripples i:nth-child(2) { animation-delay: 0.55s; }
+.ripples i:nth-child(3) { animation-delay: 1.1s; }
+@keyframes ripple {
+  0% { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.drop {
+  width: 10px; height: 14px;
+  background: var(--flood);
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+  transform: rotate(20deg);
+  box-shadow: 0 0 10px var(--flood);
+  animation: bob 1.4s ease-in-out infinite;
+}
+@keyframes bob {
+  50% { transform: rotate(20deg) translateY(3px); }
+}
+
+/* STORM */
+.cyclone {
+  width: 32px; height: 32px;
+  animation: spin 1.8s linear infinite;
+  color: var(--storm);
+}
+.cyclone svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 3; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* PROTEST */
+.crowd { display: flex; gap: 3px; align-items: flex-end; height: 24px; }
+.crowd i {
+  width: 7px; height: 14px;
+  background: var(--geo);
+  clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%);
+  animation: jump 0.9s ease-in-out infinite;
+}
+.crowd i:nth-child(2) { height: 18px; animation-delay: 0.15s; }
+.crowd i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes jump {
+  50% { transform: translateY(-5px); }
+}
+
+/* QUAKE */
+.shock { position: relative; width: 34px; height: 34px; }
+.shock i {
+  position: absolute; inset: 4px;
+  border: 2px solid #e8d27a;
+  transform: scaleX(1.4) rotate(8deg);
+  animation: shake 0.7s ease-in-out infinite;
+  opacity: 0.35;
+}
+.shock i:nth-child(2) { inset: 9px; animation-delay: 0.12s; }
+.shock i:nth-child(3) { inset: 14px; background: #e8d27a; opacity: 1; animation: none; }
+@keyframes shake {
+  0%, 100% { transform: scaleX(1.2) rotate(8deg); }
+  50% { transform: scaleX(1.6) rotate(-6deg); }
+}
+
+/* SECURITY */
+.siren { position: relative; width: 22px; height: 22px; }
+.siren i {
+  position: absolute; inset: 0;
+  background: var(--sec);
+  clip-path: polygon(20% 0, 80% 0, 100% 35%, 70% 35%, 70% 100%, 30% 100%, 30% 35%, 0 35%);
+}
+.siren b {
+  position: absolute; inset: -8px;
+  border: 2px solid var(--sec);
+  border-radius: 50%;
+  animation: siren 0.7s linear infinite;
+}
+@keyframes siren {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+
+/* HAZE */
+.smoke { position: relative; width: 32px; height: 28px; }
+.smoke i {
+  position: absolute; bottom: 4px;
+  width: 12px; height: 12px;
+  background: radial-gradient(circle, var(--haze), transparent 70%);
+  animation: drift 2.8s ease-in-out infinite;
+  opacity: 0.7;
+}
+.smoke i:nth-child(2) { left: 10px; animation-delay: 0.4s; }
+.smoke i:nth-child(3) { left: 18px; animation-delay: 0.9s; }
+@keyframes drift {
+  0% { transform: translateY(4px) scale(0.7); opacity: 0.2; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(-16px) scale(1.4); opacity: 0; }
+}
+
+.dot {
+  width: 12px; height: 12px; background: var(--lime);
+}
+
+/* ASSET PINS */
+.pin {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transform: translateY(-6px);
+}
+.pin i {
+  width: 16px; height: 16px;
+  background: var(--brass);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
+  box-shadow: 0 0 12px rgba(212, 166, 87, 0.6);
+}
+.pin-db i {
+  background: #3d7ea6;
+  box-shadow: 0 0 12px rgba(61, 126, 166, 0.55);
+}
+.pin-db b { color: #9ec9e0; letter-spacing: 0.06em; }
+
+.terrain-ev {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto;
+}
+.hq-time {
+  min-width: 148px;
+  max-width: 200px;
+  padding: 6px 8px;
+  background: rgba(8, 10, 14, 0.86);
+  border: 1px solid rgba(126, 182, 212, 0.45);
+  color: #efe6d8;
+  font-size: 10px;
+  line-height: 1.3;
+  backdrop-filter: blur(10px);
+}
+.hq-time strong {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #7eb6d4;
+}
+.hq-time span { display: block; color: #c8c0b4; }
+.hq-time em {
+  display: block;
+  font-style: normal;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--brass);
+  margin-top: 3px;
+}
+.hq-time.in { border-color: rgba(255, 77, 18, 0.55); }
+.hq-time.in em { color: var(--fire); }
+.pin-medium i { background: var(--brass); }
+.pin-low i { background: #6d7a62; }
+.pin b {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #f0e6c8;
+  text-shadow: 0 1px 4px #000;
+  background: rgba(0,0,0,0.55);
+  padding: 1px 4px;
+}
+
+.maplibregl-marker { cursor: pointer; }
