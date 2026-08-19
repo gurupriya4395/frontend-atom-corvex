@@ -151,7 +151,7 @@ button { cursor: pointer; }
 }
 .globe-stage {
   background:
-    radial-gradient(circle at 50% 38%, #ffffff 0%, #f4f4f8 45%, #e8e8f0 100%);
+    radial-gradient(circle at 50% 40%, #c8dced 0%, #dce8f4 38%, #eef2f8 72%, #f4f4f8 100%);
 }
 .globe-stage canvas {
   display: block;
@@ -1213,9 +1213,7 @@ td { border-bottom: 1px solid #1c2418; padding: 10px 8px; }
   inset: 0;
   pointer-events: none;
   z-index: 3;
-  background:
-    radial-gradient(circle at 50% 40%, transparent 54%, rgba(196, 181, 253, 0.14) 100%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 62%, rgba(228, 228, 236, 0.35) 100%);
+  background: radial-gradient(circle at 50% 42%, transparent 58%, rgba(148, 163, 184, 0.18) 100%);
 }
 
 .boot-tag {

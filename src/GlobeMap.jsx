@@ -185,7 +185,7 @@ export default function GlobeMap({
 
 function createWorld(el, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#f4f4f8')
+  scene.background = new THREE.Color('#e8eef6')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 40, 280)
@@ -207,36 +207,45 @@ function createWorld(el, getOnSelect) {
   controls.maxDistance = 520
   controls.enablePan = false
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.85))
-  const sun = new THREE.DirectionalLight(0xffffff, 1.05)
-  sun.position.set(-60, 140, 120)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.15))
+  const sun = new THREE.DirectionalLight(0xfff8f0, 1.45)
+  sun.position.set(-70, 120, 100)
   scene.add(sun)
-  const fill = new THREE.DirectionalLight(0xf0f4ff, 0.72)
-  fill.position.set(120, -20, -90)
+  const fill = new THREE.DirectionalLight(0xc8dcff, 0.42)
+  fill.position.set(110, -30, -80)
   scene.add(fill)
-  const rim = new THREE.DirectionalLight(0xe9d5ff, 0.35)
-  rim.position.set(-140, 40, -100)
+  const rim = new THREE.DirectionalLight(0xd8c4ff, 0.28)
+  rim.position.set(-130, 30, -110)
   scene.add(rim)
 
-  const clayTex = paintClayEarth()
-  const globe = new THREE.Mesh(
-    new THREE.SphereGeometry(R, 80, 64),
-    new THREE.MeshPhongMaterial({
-      map: clayTex,
-      color: 0xffffff,
-      emissive: 0xfafafc,
-      shininess: 42,
-      specular: 0xf5f5f8,
-    }),
-  )
+  const earthTex = paintLightEarth()
+  const globeMat = new THREE.MeshPhongMaterial({
+    map: earthTex,
+    color: 0xffffff,
+    emissive: 0x0a0c10,
+    emissiveIntensity: 0.04,
+    shininess: 22,
+    specular: 0x666677,
+  })
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
   scene.add(globe)
+
+  new THREE.TextureLoader().load(
+    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-day.jpg',
+    (remote) => {
+      remote.colorSpace = THREE.SRGBColorSpace
+      remote.anisotropy = 8
+      globeMat.map = remote
+      globeMat.needsUpdate = true
+    },
+  )
 
   const atmos = new THREE.Mesh(
     new THREE.SphereGeometry(R * 1.045, 48, 32),
     new THREE.MeshBasicMaterial({
-      color: 0xc4b5fd,
+      color: 0x8bafd4,
       transparent: true,
-      opacity: 0.09,
+      opacity: 0.14,
       side: THREE.BackSide,
     }),
   )
@@ -468,7 +477,7 @@ function destPoint(lat, lng, km, bearingDeg) {
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI]
 }
 
-function paintClayEarth() {
+function paintLightEarth() {
   const w = 2048
   const h = 1024
   const c = document.createElement('canvas')
@@ -477,56 +486,46 @@ function paintClayEarth() {
   const g = c.getContext('2d')
 
   const ocean = g.createLinearGradient(0, 0, 0, h)
-  ocean.addColorStop(0, '#fafafc')
-  ocean.addColorStop(0.45, '#f6f6fa')
-  ocean.addColorStop(1, '#ececf4')
+  ocean.addColorStop(0, '#8ec0de')
+  ocean.addColorStop(0.5, '#6ba8cc')
+  ocean.addColorStop(1, '#5a96bc')
   g.fillStyle = ocean
   g.fillRect(0, 0, w, h)
 
   const land = [
-    [420, 360, 200, 110],
-    [980, 320, 240, 130],
-    [1480, 300, 220, 100],
-    [560, 620, 120, 150],
-    [1180, 580, 180, 120],
-    [1680, 520, 160, 90],
-    [300, 480, 90, 70],
-    [820, 440, 70, 55],
-    [640, 280, 55, 40],
-    [1320, 420, 80, 50],
+    [420, 360, 200, 110, '#c4b48a'],
+    [980, 320, 240, 130, '#b8a078'],
+    [1480, 300, 220, 100, '#c9b896'],
+    [560, 620, 120, 150, '#a8c090'],
+    [1180, 580, 180, 120, '#b0a070'],
+    [1680, 520, 160, 90, '#9aab72'],
+    [300, 480, 90, 70, '#b8a078'],
+    [820, 440, 70, 55, '#c4b48a'],
+    [640, 280, 55, 40, '#8faa6e'],
+    [1320, 420, 80, 50, '#a69068'],
   ]
-  for (const [x, y, rx, ry] of land) {
-    const shade = g.createRadialGradient(x - rx * 0.2, y - ry * 0.25, rx * 0.1, x, y, rx * 1.1)
-    shade.addColorStop(0, '#ffffff')
-    shade.addColorStop(0.42, '#eef0f6')
-    shade.addColorStop(0.78, '#e2e4ec')
-    shade.addColorStop(1, '#d8dae4')
+  for (const [x, y, rx, ry, base] of land) {
+    const shade = g.createRadialGradient(x - rx * 0.25, y - ry * 0.3, rx * 0.08, x, y, rx * 1.15)
+    shade.addColorStop(0, lighten(base, 28))
+    shade.addColorStop(0.45, base)
+    shade.addColorStop(0.82, darken(base, 22))
+    shade.addColorStop(1, darken(base, 38))
     g.fillStyle = shade
     g.beginPath()
     g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
     g.fill()
+    g.strokeStyle = darken(base, 45)
+    g.lineWidth = 3
+    g.stroke()
   }
 
-  for (let i = 0; i < 140; i++) {
+  for (let i = 0; i < 48; i++) {
     const x = Math.random() * w
     const y = Math.random() * h
-    const r = 18 + Math.random() * 90
-    const lift = g.createRadialGradient(x, y, 0, x, y, r)
-    lift.addColorStop(0, 'rgba(255, 255, 255, 0.55)')
-    lift.addColorStop(0.55, 'rgba(255, 255, 255, 0.12)')
-    lift.addColorStop(1, 'rgba(220, 224, 234, 0)')
-    g.fillStyle = lift
-    g.beginPath()
-    g.arc(x, y, r, 0, Math.PI * 2)
-    g.fill()
-  }
-  for (let i = 0; i < 90; i++) {
-    const x = Math.random() * w
-    const y = Math.random() * h
-    const r = 10 + Math.random() * 48
+    const r = 24 + Math.random() * 70
     const dent = g.createRadialGradient(x, y, 0, x, y, r)
-    dent.addColorStop(0, 'rgba(196, 200, 212, 0.22)')
-    dent.addColorStop(1, 'rgba(196, 200, 212, 0)')
+    dent.addColorStop(0, 'rgba(42, 58, 72, 0.14)')
+    dent.addColorStop(1, 'rgba(42, 58, 72, 0)')
     g.fillStyle = dent
     g.beginPath()
     g.arc(x, y, r, 0, Math.PI * 2)
@@ -536,6 +535,22 @@ function paintClayEarth() {
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
+}
+
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.min(255, ((n >> 16) & 255) + amt)
+  const g = Math.min(255, ((n >> 8) & 255) + amt)
+  const b = Math.min(255, (n & 255) + amt)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+function darken(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.max(0, ((n >> 16) & 255) - amt)
+  const g = Math.max(0, ((n >> 8) & 255) - amt)
+  const b = Math.max(0, (n & 255) - amt)
+  return `rgb(${r}, ${g}, ${b})`
 }
 
 function colorFor(e) {
