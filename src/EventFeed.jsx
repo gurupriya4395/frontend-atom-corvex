@@ -10,7 +10,6 @@ export default function EventFeed({
   now,
   counts,
   freshId,
-  acked,
   timeMode,
   siteName,
   emptyHint,
@@ -50,7 +49,7 @@ export default function EventFeed({
           return (
             <button
               key={ev.id}
-              className={`card kind-${ev.kind} impact-${ev.impact || 'none'} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''} ${acked?.has(ev.id) ? 'acked' : ''}`}
+              className={`card kind-${ev.kind} impact-${ev.impact || 'none'} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''}`}
               style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
               onClick={() => onSelect(ev.id)}
             >
@@ -59,7 +58,7 @@ export default function EventFeed({
                 <div className="card-kicker">
                   <span className={`chip ${ev.severity}`}>{ev.severity}</span>
                   {ev.forecast && <span className="chip">forecast</span>}
-                  {ev.alert && !acked?.has(ev.id) && <span className="chip high">alert</span>}
+                  {ev.alert && <span className="chip high">alert</span>}
                   <span className="ago">{relativeTime(ev.publishedAt)}</span>
                 </div>
                 <p className={`so-line ${sw.verdict}`}>{sw.line}</p>

@@ -174,6 +174,30 @@ button { cursor: pointer; }
   pointer-events: auto;
   z-index: 2;
 }
+.map-stage.on {
+  display: block;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 3;
+}
+.terrain-canvas .maplibregl-map,
+.terrain-canvas .maplibregl-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+.terrain-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  color: #6366F1;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
 .map-stage .map-el { position: absolute; inset: 0; }
 .terrain-canvas {
   position: absolute;
@@ -399,7 +423,7 @@ button { cursor: pointer; }
 }
 .map-wrap.is-streets .hud-frame { display: none; }
 .map-wrap.is-streets::after {
-  background: radial-gradient(circle at 50% 48%, transparent 58%, rgba(226, 232, 240, 0.35) 100%);
+  display: none;
 }
 
 .view-toggle button {

@@ -11,15 +11,14 @@ export default function SideRail({
   filteredCount,
   latencyMs,
   log,
-  acked,
   onPickSite,
   siteFilterId,
 }) {
   const atRisk = assets.filter((a) =>
-    allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert && !acked?.has(e.id)),
+    allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert),
   ).length
   const live = allEvents.filter((e) => !e.forecast).length
-  const alerts = allEvents.filter((e) => e.alert && !acked?.has(e.id)).length
+  const alerts = allEvents.filter((e) => e.alert).length
   const mix = {
     geopolitical: allEvents.filter((e) => e.category === 'geopolitical').length,
     environmental: allEvents.filter((e) => e.category === 'environmental').length,
@@ -30,8 +29,8 @@ export default function SideRail({
   const loc = now.toLocaleTimeString('en-GB', { hour12: false })
 
   const ranked = [...assets].sort((a, b) => {
-    const hotA = allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert && !acked?.has(e.id))
-    const hotB = allEvents.some((e) => e.linked && e.primary.asset.id === b.id && e.alert && !acked?.has(e.id))
+    const hotA = allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert)
+    const hotB = allEvents.some((e) => e.linked && e.primary.asset.id === b.id && e.alert)
     return Number(hotB) - Number(hotA)
   })
 
@@ -137,7 +136,7 @@ export default function SideRail({
       <ul className="asset-live">
         {ranked.map((a) => {
           const hits = allEvents.filter((e) => e.linked && e.primary.asset.id === a.id)
-          const hot = hits.find((e) => e.alert && !acked?.has(e.id))
+          const hot = hits.find((e) => e.alert)
           return (
             <li
               key={a.id}

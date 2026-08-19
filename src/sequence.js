@@ -46,10 +46,9 @@ export const DESK_BEATS = [
   },
   {
     at: 13600,
-    cue: 'Alert and explanation panel opens',
+    cue: 'High impact on map — distance and fence shown',
     scoring: false,
     brief: true,
-    alerts: true,
   },
   { at: 17000, cue: null },
 ]

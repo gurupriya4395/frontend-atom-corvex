@@ -1,11 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
-import EventDetail from './EventDetail'
 import SideRail from './SideRail'
 import ImpactStage from './ImpactStage'
 import { ASSETS, DEMO, EVENTS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
-import { enrich, clock, searchHay, soWhat } from './scoring'
+import { enrich, clock, searchHay } from './scoring'
 import './index.css'
 import './markers.css'
 
@@ -24,8 +23,6 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [selectedAssetId, setSelectedAssetId] = useState(null)
   const [siteFilterId, setSiteFilterId] = useState(null)
-  const [alertsOpen, setAlertsOpen] = useState(false)
-  const [acked, setAcked] = useState(() => new Set())
   const [boot, setBoot] = useState(true)
   const [now, setNow] = useState(() => new Date())
   const [latencyMs, setLatencyMs] = useState(86)
@@ -34,7 +31,6 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [cue, setCue] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
-  const [briefOpen, setBriefOpen] = useState(false)
   const [scene, setScene] = useState({
     pulse: false,
     flood: false,
@@ -131,7 +127,6 @@ export default function App() {
       : selectedAssetId
         ? { type: 'asset', id: selectedAssetId }
         : null
-  const alerts = enriched.filter((e) => e.alert && !acked.has(e.id))
   const showRadius = scene.warehouse
     ? DEMO.assetId
     : selectedEvent?.linked
@@ -155,7 +150,7 @@ export default function App() {
     setSelectedAssetId(null)
     setSiteFilterId(null)
     setPage('operations')
-    setBriefOpen(opts.brief !== false)
+    if (opts.map) setMapMode('map')
   }
 
   const pickAsset = (id) => {
@@ -165,7 +160,6 @@ export default function App() {
     setPage('operations')
     setAffectsOnly(false)
     setFeedMode('geographical')
-    setBriefOpen(false)
   }
 
   const resetScene = () =>
@@ -183,8 +177,6 @@ export default function App() {
     setFeedMode('proximity')
     setAffectsOnly(true)
     setSiteFilterId(null)
-    setAlertsOpen(false)
-    setBriefOpen(false)
     setSelectedId(null)
     setSelectedAssetId(null)
     setQ('')
@@ -204,23 +196,11 @@ export default function App() {
             distance: beat.distance ?? s.distance,
             scoring: beat.scoring ?? s.scoring,
           }))
-          if (beat.select) pickEvent(DEMO.eventId, { brief: false })
-          if (beat.brief) {
-            pickEvent(DEMO.eventId, { brief: true })
-            setScene((s) => ({ ...s, scoring: false }))
-          }
-          if (beat.alerts) setAlertsOpen(true)
+          if (beat.select) pickEvent(DEMO.eventId, { map: beat.mapMode === 'map' })
+          if (beat.brief) pickEvent(DEMO.eventId, { map: true })
         }, beat.at),
       )
     })
-  }
-
-  const ack = (id) => {
-    const next = new Set(acked).add(id)
-    const left = enriched.filter((e) => e.alert && !next.has(e.id)).length
-    setAcked(next)
-    setAlertsOpen(false)
-    setToast({ title: left ? `Bell · ${left} still open` : 'Bell clear', place: 'Acknowledged' })
   }
 
   useEffect(() => {
@@ -234,8 +214,6 @@ export default function App() {
         clearCueTimers()
         resetScene()
         setSelectedId(null)
-        setBriefOpen(false)
-        setAlertsOpen(false)
         setCue(null)
         searchRef.current?.blur()
       }
@@ -297,43 +275,8 @@ export default function App() {
             }}
           />
           <span className="stamp">{clock(now.getTime())}</span>
-          <button
-            className={`bell ${alerts.length ? 'has' : ''} ${alertsOpen ? 'open' : ''}`}
-            onClick={() => setAlertsOpen((v) => !v)}
-            aria-label="Alerts"
-          >
-            {alerts.length > 0 && <span className="n">{alerts.length}</span>}
-            ▴
-          </button>
         </div>
       </header>
-
-      {alertsOpen && (
-        <div className="alerts-pop">
-          <header>
-            Still open <em>{alerts.length}</em>
-          </header>
-          {alerts.length === 0 && <div className="empty">All quiet. Acknowledged alerts drop off the bell.</div>}
-          {alerts.map((a) => (
-            <div key={a.id} className="alert-row">
-              <button
-                className="item"
-                onClick={() => {
-                  pickEvent(a.id)
-                  setAlertsOpen(false)
-                }}
-              >
-                <strong>{(a.impact || 'alert').toUpperCase()}</strong>
-                <div className="so-line">{soWhat(a).line}</div>
-                <div className="stamp">{a.title}</div>
-              </button>
-              <button className="ack-mini" type="button" onClick={() => ack(a.id)}>
-                Ack
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {page === 'assets' ? (
         <div className="assets-page">
@@ -347,7 +290,7 @@ export default function App() {
           <div className="site-grid">
             {ASSETS.map((a) => {
               const hits = enriched.filter((e) => e.linked && e.primary.asset.id === a.id)
-              const hot = hits.find((e) => e.alert && !acked.has(e.id))
+              const hot = hits.find((e) => e.alert)
               return (
                 <article
                   key={a.id}
@@ -407,11 +350,10 @@ export default function App() {
               assets={ASSETS}
               selected={selected}
               onSelect={(sel) => {
-                if (sel.type === 'event') pickEvent(sel.id)
+                if (sel.type === 'event') pickEvent(sel.id, { map: mapMode === 'map' })
                 if (sel.type === 'asset') pickAsset(sel.id)
               }}
               showRadiusFor={showRadius}
-              acked={acked}
               timeMode={timeMode}
               mapMode={mapMode}
               onMapMode={setMapMode}
@@ -444,7 +386,6 @@ export default function App() {
             filteredCount={filtered.length}
             latencyMs={latencyMs}
             log={log}
-            acked={acked}
             onPickSite={pickAsset}
             siteFilterId={siteFilterId}
           />
@@ -459,11 +400,10 @@ export default function App() {
               if (m === 'geographical') setAffectsOnly(false)
             }}
             selectedId={selectedId}
-            onSelect={pickEvent}
+            onSelect={(id) => pickEvent(id, { map: mapMode === 'map' })}
             now={now}
             counts={counts}
             freshId={freshId}
-            acked={acked}
             timeMode={timeMode}
             siteName={siteName}
             emptyHint={emptyHint}
@@ -508,18 +448,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {page === 'operations' && selectedEvent && briefOpen && (
-        <EventDetail
-          event={selectedEvent}
-          onClose={() => {
-            setSelectedId(null)
-            setBriefOpen(false)
-          }}
-          acknowledged={acked}
-          onAck={ack}
-        />
       )}
     </div>
   )

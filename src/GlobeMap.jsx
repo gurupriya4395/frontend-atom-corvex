@@ -12,7 +12,6 @@ export default function GlobeMap({
   selected,
   onSelect,
   showRadiusFor,
-  acked,
   timeMode,
   mapMode = 'globe',
   onMapMode,
@@ -29,8 +28,8 @@ export default function GlobeMap({
   const worldRef = useRef(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
-  const dataRef = useRef({ events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId })
-  dataRef.current = { events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId }
+  const dataRef = useRef({ events, assets, showRadiusFor, pulseEventId, highlightAssetId })
+  dataRef.current = { events, assets, showRadiusFor, pulseEventId, highlightAssetId }
 
   useEffect(() => {
     const el = hostRef.current
@@ -78,7 +77,7 @@ export default function GlobeMap({
 
   useEffect(() => {
     worldRef.current?.setData(dataRef.current)
-  }, [events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId])
+  }, [events, assets, showRadiusFor, pulseEventId, highlightAssetId])
 
   useEffect(() => {
     const world = worldRef.current
@@ -105,8 +104,8 @@ export default function GlobeMap({
   }, [mode, selected])
 
   useEffect(() => {
-    if (mode === 'map') import('./MapView.jsx').then((m) => setMapView(() => m.default))
-  }, [mode])
+    import('./MapView.jsx').then((m) => setMapView(() => m.default))
+  }, [])
 
   return (
     <div className={`map-wrap ${mode === 'map' ? 'is-streets' : ''}`}>
@@ -286,7 +285,7 @@ function createWorld(el, getOnSelect) {
   resize()
   tick()
 
-  const setData = ({ events, assets, showRadiusFor, acked, pulseEventId, highlightAssetId }) => {
+  const setData = ({ events, assets, showRadiusFor, pulseEventId, highlightAssetId }) => {
     while (overlay.children.length) {
       const child = overlay.children[0]
       overlay.remove(child)
@@ -296,7 +295,6 @@ function createWorld(el, getOnSelect) {
       else child.material?.dispose()
     }
 
-    const seen = acked instanceof Set ? acked : new Set(acked || [])
     const fence = assets.find((a) => a.id === showRadiusFor)
 
     for (const a of assets) {
@@ -314,7 +312,6 @@ function createWorld(el, getOnSelect) {
       overlay.add(fenceRing(fence.coords[1], fence.coords[0], fence.radiusKm, 0xc4a574))
     }
     for (const e of events) {
-      const dim = seen.has(e.id)
       overlay.add(
         htmlPin(
           e.coords[1],
@@ -324,11 +321,11 @@ function createWorld(el, getOnSelect) {
           pulseEventId === e.id ? 'is-pulse' : '',
         ),
       )
-      overlay.add(dot(e.coords[1], e.coords[0], colorFor(e), dim ? 0.28 : 1))
-      if (!dim && (e.impact === 'high' || e.kind === 'fire' || e.kind === 'quake' || pulseEventId === e.id)) {
+      overlay.add(dot(e.coords[1], e.coords[0], colorFor(e), 1))
+      if (e.impact === 'high' || e.kind === 'fire' || e.kind === 'quake' || pulseEventId === e.id) {
         overlay.add(ring(e.coords[1], e.coords[0], pulseEventId === e.id ? 14 : e.kind === 'quake' ? 10 : 5.5, colorFor(e)))
       }
-      if (e.linked && !dim) {
+      if (e.linked) {
         overlay.add(
           arc(
             e.coords[1],

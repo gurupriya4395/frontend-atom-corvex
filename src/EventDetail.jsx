@@ -1,8 +1,7 @@
 import { clock, hqLine, soWhat } from './scoring'
 
-export default function EventDetail({ event, onClose, onAck, acknowledged }) {
+export default function EventDetail({ event, onClose }) {
   if (!event) return null
-  const acked = acknowledged.has(event.id)
   const sw = soWhat(event)
   const hq = hqLine(event)
   const latestIdx = (event.updates?.length || 0) - 1
@@ -60,14 +59,6 @@ export default function EventDetail({ event, onClose, onAck, acknowledged }) {
 
         <p className="lede">{event.summary}</p>
 
-        <div className="ack-status">
-          {acked
-            ? 'Acknowledged · off the bell'
-            : event.alert
-              ? `Alert queued → Security Ops · ${clock(event.publishedAt)}`
-              : 'No alert — below threshold or unlinked'}
-        </div>
-
         {event.updates?.length > 0 && (
           <div className="thread-block">
             <div className="stamp">Watch thread</div>
@@ -85,9 +76,6 @@ export default function EventDetail({ event, onClose, onAck, acknowledged }) {
           </div>
         )}
         <div className="actions">
-          <button className="primary" onClick={() => onAck(event.id)}>
-            {acked ? 'Acknowledged' : 'Acknowledge'}
-          </button>
           <button className="ghost" onClick={onClose}>
             Keep on map
           </button>

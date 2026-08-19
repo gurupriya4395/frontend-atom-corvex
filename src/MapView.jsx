@@ -3,24 +3,25 @@ import { AttributionControl, Map, Marker, NavigationControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { eventMarkerHtml, eventCalloutHtml, assetMarkerHtml } from './markers'
 import { haversineKm } from './scoring'
-import { DEMO, MUMBAI_FLOOD_ZONE } from './data'
+import { MUMBAI_FLOOD_ZONE } from './data'
 
-const LIGHT_STYLE = 'https://tiles.openfreemap.org/styles/positron'
-const FALLBACK_STYLE = {
+/** Carto Voyager raster — reliable roads/labels on a light basemap. */
+const STREET_STYLE = {
   version: 8,
   sources: {
     carto: {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
       ],
       tileSize: 256,
-      attribution: '© CARTO © OSM',
+      attribution: '© CARTO © OpenStreetMap',
     },
   },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+  layers: [{ id: 'carto', type: 'raster', source: 'carto', minzoom: 0, maxzoom: 22 }],
 }
 
 export default function MapView({
@@ -42,16 +43,16 @@ export default function MapView({
   const dataRef = useRef({ events, assets })
   dataRef.current = { events, assets }
   const [fail, setFail] = useState(null)
+  const [ready, setReady] = useState(false)
   const [tick, setTick] = useState(0)
 
   const liveOrForecast = timeMode === 'live' || timeMode === 'forecast'
 
   useEffect(() => {
     const el = wrapRef.current
-    if (!el) return
+    if (!el || !active) return
     let map
     let cancelled = false
-    let usedFallback = false
 
     const boot = () => {
       if (cancelled || map) return
@@ -59,12 +60,12 @@ export default function MapView({
       try {
         map = new Map({
           container: el,
-          style: LIGHT_STYLE,
+          style: STREET_STYLE,
           center: [78.0, 21.5],
-          zoom: 3.8,
-          pitch: 32,
-          bearing: -8,
-          maxPitch: 80,
+          zoom: 4.2,
+          pitch: 0,
+          bearing: 0,
+          maxPitch: 60,
           attributionControl: false,
         })
       } catch (err) {
@@ -74,24 +75,13 @@ export default function MapView({
       mapRef.current = map
       setFail(null)
 
-      map.on('error', (e) => {
-        const msg = String(e?.error?.message || e?.error || '')
-        if (!usedFallback && /style|fetch|ajax|network|failed/i.test(msg)) {
-          usedFallback = true
-          try {
-            map.setStyle(FALLBACK_STYLE)
-          } catch {
-            setFail('Map tiles could not load')
-          }
-        }
-      })
-
       const onReady = () => {
+        if (cancelled) return
         addDeskLayers(map)
         map.resize()
+        setReady(true)
       }
-      map.on('load', onReady)
-      map.on('style.load', onReady)
+      map.once('load', onReady)
       map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-right')
       map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
     }
@@ -101,8 +91,11 @@ export default function MapView({
       else map.resize()
     })
     ro.observe(el)
-    boot()
-    const late = [80, 240, 800].map((ms) => setTimeout(boot, ms))
+    requestAnimationFrame(() => {
+      boot()
+      requestAnimationFrame(boot)
+    })
+    const late = [120, 400, 1000].map((ms) => setTimeout(boot, ms))
 
     return () => {
       cancelled = true
@@ -112,12 +105,13 @@ export default function MapView({
       markersRef.current = []
       map?.remove()
       mapRef.current = null
+      setReady(false)
     }
-  }, [tick])
+  }, [tick, active])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || !ready) return
 
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
@@ -147,100 +141,105 @@ export default function MapView({
       markersRef.current.push(new Marker({ element: el, anchor: 'bottom' }).setLngLat(event.coords).addTo(map))
     })
 
-    const apply = () => {
-      addDeskLayers(map)
-      const pulses = map.getSource('pulses')
-      if (pulses) {
-        pulses.setData({
-          type: 'FeatureCollection',
-          features: events.map((e) => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: e.coords },
-            properties: { impact: e.impact || 'none' },
-          })),
-        })
-      }
+    addDeskLayers(map)
 
-      const hqs = assets.filter((a) => a.org === 'deutsche-bank')
-      const cinematic = scene.flood || scene.warehouse || scene.distance
-      const fences = map.getSource('db-fences')
-      if (fences) {
-        fences.setData({
-          type: 'FeatureCollection',
-          features:
-            liveOrForecast && !cinematic
-              ? hqs.map((hq) => ({
+    const pulses = map.getSource('pulses')
+    if (pulses) {
+      pulses.setData({
+        type: 'FeatureCollection',
+        features: events.map((e) => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: e.coords },
+          properties: { impact: e.impact || 'none' },
+        })),
+      })
+    }
+
+    const hqs = assets.filter((a) => a.org === 'deutsche-bank')
+    const fences = map.getSource('db-fences')
+    if (fences) {
+      fences.setData({
+        type: 'FeatureCollection',
+        features:
+          liveOrForecast && !scene.flood
+            ? hqs.map((hq) => ({
+                type: 'Feature',
+                geometry: { type: 'Polygon', coordinates: [circlePoly(hq.coords, hq.radiusKm)] },
+                properties: { id: hq.id },
+              }))
+            : [],
+      })
+    }
+
+    const links = map.getSource('hq-links')
+    if (links) {
+      links.setData({
+        type: 'FeatureCollection',
+        features:
+          liveOrForecast && !scene.flood
+            ? events
+                .filter((e) => e.db)
+                .map((e) => ({
                   type: 'Feature',
-                  geometry: { type: 'Polygon', coordinates: [circlePoly(hq.coords, hq.radiusKm)] },
-                  properties: { id: hq.id },
+                  geometry: { type: 'LineString', coordinates: [e.db.hq.coords, e.coords] },
+                  properties: { id: e.id },
                 }))
-              : [],
-        })
-      }
+            : [],
+      })
+    }
 
-      const links = map.getSource('hq-links')
-      if (links) {
-        links.setData({
-          type: 'FeatureCollection',
-          features:
-            liveOrForecast && !cinematic
-              ? events
-                  .filter((e) => e.db)
-                  .map((e) => ({
-                    type: 'Feature',
-                    geometry: { type: 'LineString', coordinates: [e.db.hq.coords, e.coords] },
-                    properties: { id: e.id },
-                  }))
-              : [],
-        })
-      }
+    const radius = map.getSource('radius')
+    if (radius) {
+      const asset = assets.find((a) => a.id === showRadiusFor)
+      radius.setData({
+        type: 'FeatureCollection',
+        features: asset
+          ? [
+              {
+                type: 'Feature',
+                properties: { hot: Boolean(highlightAssetId && asset.id === highlightAssetId) },
+                geometry: { type: 'Polygon', coordinates: [circlePoly(asset.coords, asset.radiusKm)] },
+              },
+            ]
+          : [],
+      })
+    }
 
-      const radius = map.getSource('radius')
-      if (radius) {
-        const asset = assets.find((a) => a.id === showRadiusFor)
-        radius.setData({
-          type: 'FeatureCollection',
-          features: asset
+    const flood = map.getSource('flood')
+    if (flood) flood.setData({ type: 'FeatureCollection', features: scene.flood ? [MUMBAI_FLOOD_ZONE] : [] })
+
+    const focusEvent =
+      selected?.type === 'event' ? events.find((e) => e.id === selected.id) : events.find((e) => e.linked)
+    const linkAsset = focusEvent?.linked
+      ? focusEvent.primary.asset
+      : highlightAssetId
+        ? assets.find((a) => a.id === highlightAssetId)
+        : null
+
+    const link = map.getSource('asset-link')
+    if (link) {
+      link.setData({
+        type: 'FeatureCollection',
+        features:
+          focusEvent && linkAsset
             ? [
                 {
                   type: 'Feature',
-                  properties: { hot: Boolean(highlightAssetId && asset.id === highlightAssetId) },
-                  geometry: { type: 'Polygon', coordinates: [circlePoly(asset.coords, asset.radiusKm)] },
+                  geometry: { type: 'LineString', coordinates: [focusEvent.coords, linkAsset.coords] },
                 },
               ]
             : [],
-        })
-      }
-
-      const flood = map.getSource('flood')
-      if (flood) flood.setData({ type: 'FeatureCollection', features: scene.flood ? [MUMBAI_FLOOD_ZONE] : [] })
-
-      const warehouse = assets.find((a) => a.id === (highlightAssetId || DEMO.assetId))
-      const ev =
-        selected?.type === 'event' ? events.find((e) => e.id === selected.id) : events.find((e) => e.id === DEMO.eventId)
-      const link = map.getSource('asset-link')
-      if (link) {
-        link.setData({
-          type: 'FeatureCollection',
-          features:
-            scene.distance && ev && warehouse
-              ? [{ type: 'Feature', geometry: { type: 'LineString', coordinates: [ev.coords, warehouse.coords] } }]
-              : [],
-        })
-      }
-
-      if (scene.distance && ev && warehouse) {
-        const km = haversineKm(ev.coords, warehouse.coords)
-        const mid = [(ev.coords[0] + warehouse.coords[0]) / 2, (ev.coords[1] + warehouse.coords[1]) / 2]
-        const chip = document.createElement('div')
-        chip.className = `dist-chip sev-${ev.severity || 'low'}`
-        chip.innerHTML = `<em>Distance</em><b>${km.toFixed(1)} km</b><span>event → ${escapeHtml(warehouse.name)}</span>`
-        markersRef.current.push(new Marker({ element: chip, anchor: 'center' }).setLngLat(mid).addTo(map))
-      }
+      })
     }
 
-    if (map.isStyleLoaded()) apply()
-    else map.once('load', apply)
+    if (focusEvent && linkAsset) {
+      const km = focusEvent.linked ? focusEvent.primary.km : haversineKm(focusEvent.coords, linkAsset.coords)
+      const mid = [(focusEvent.coords[0] + linkAsset.coords[0]) / 2, (focusEvent.coords[1] + linkAsset.coords[1]) / 2]
+      const chip = document.createElement('div')
+      chip.className = `dist-chip sev-${focusEvent.severity || 'low'}`
+      chip.innerHTML = `<em>Event → asset</em><b>${km.toFixed(1)} km</b><span>${escapeHtml(linkAsset.name)}</span>`
+      markersRef.current.push(new Marker({ element: chip, anchor: 'center' }).setLngLat(mid).addTo(map))
+    }
   }, [
     events,
     assets,
@@ -250,47 +249,45 @@ export default function MapView({
     selected?.type,
     scene.flood,
     scene.warehouse,
-    scene.distance,
     highlightAssetId,
+    ready,
   ])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !selected?.id) return
+    if (!map || !ready || !selected?.id) return
     const { events: evs, assets: asts } = dataRef.current
     const target =
       selected.type === 'event' ? evs.find((e) => e.id === selected.id) : asts.find((a) => a.id === selected.id)
     if (!target) return
     const cinematic = scene.flood || scene.distance || scene.warehouse
-    const zoom = cinematic ? (scene.distance ? 12.2 : 11.6) : selected.type === 'event' ? 11.2 : 9.6
-    const fly = () =>
-      map.flyTo({
-        center: target.coords,
-        zoom,
-        pitch: cinematic ? 48 : 42,
-        bearing: selected.type === 'event' ? -22 : -8,
-        duration: cinematic ? 1100 : 1400,
-        essential: true,
-      })
-    if (map.isStyleLoaded()) fly()
-    else map.once('load', fly)
-  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse])
+    const zoom = cinematic ? (scene.distance ? 12.2 : 11.6) : selected.type === 'event' ? 11.4 : 10
+    map.flyTo({
+      center: target.coords,
+      zoom,
+      pitch: cinematic ? 42 : 0,
+      bearing: 0,
+      duration: 1200,
+      essential: true,
+    })
+  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready])
 
   useEffect(() => {
     if (!active) return
-    mapRef.current?.resize()
+    const t = setTimeout(() => mapRef.current?.resize(), 50)
+    return () => clearTimeout(t)
   }, [active])
 
   const selectedEvent = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
   const selectedAsset = selected?.type === 'asset' ? assets.find((a) => a.id === selected.id) : null
-  const cardEvent = selectedEvent || events.find((e) => e.linked) || events[0] || null
+  const cardEvent = selectedEvent || events.find((e) => e.linked) || null
 
   const zoomOut = () => {
     mapRef.current?.flyTo({
       center: [78.0, 21.5],
-      zoom: 4.15,
-      pitch: 22,
-      bearing: -8,
+      zoom: 4.2,
+      pitch: 0,
+      bearing: 0,
       duration: 1200,
       essential: true,
     })
@@ -299,6 +296,7 @@ export default function MapView({
   return (
     <div className="map-el terrain-map">
       <div className="terrain-canvas" ref={wrapRef} />
+      {!ready && !fail && <div className="terrain-loading">Loading streets…</div>}
       {fail && (
         <div className="terrain-fail">
           <p>Streets did not load.</p>
@@ -360,7 +358,7 @@ function ParamCard({ event, pinned }) {
       <header>
         <span className={`param-icon ${event.severity}`} />
         <div>
-          <em>{pinned ? 'Selected event' : 'Nearest hit'}</em>
+          <em>{pinned ? 'On map' : 'Nearest hit'}</em>
           <h3>{event.title}</h3>
         </div>
       </header>
@@ -385,11 +383,6 @@ function ParamCard({ event, pinned }) {
       <footer>
         <span>{site}</span>
         <span>{event.kind}</span>
-        {event.db && (
-          <span>
-            DB {event.db.hq.city} · {event.db.km.toFixed(1)} km
-          </span>
-        )}
       </footer>
     </article>
   )
@@ -403,21 +396,22 @@ function addDeskLayers(map) {
       type: 'heatmap',
       source: 'pulses',
       paint: {
-        'heatmap-weight': 0.7,
-        'heatmap-intensity': 0.85,
-        'heatmap-radius': 28,
+        'heatmap-weight': 0.65,
+        'heatmap-intensity': 0.75,
+        'heatmap-radius': 24,
+        'heatmap-opacity': 0.45,
         'heatmap-color': [
           'interpolate',
           ['linear'],
           ['heatmap-density'],
           0,
           'rgba(0,0,0,0)',
-          0.2,
-          'rgba(99, 102, 241, 0.18)',
-          0.5,
-          'rgba(139, 92, 246, 0.28)',
-          0.85,
-          'rgba(249, 115, 22, 0.42)',
+          0.25,
+          'rgba(99, 102, 241, 0.2)',
+          0.6,
+          'rgba(236, 72, 153, 0.35)',
+          0.9,
+          'rgba(249, 115, 22, 0.45)',
         ],
       },
     })
@@ -428,13 +422,13 @@ function addDeskLayers(map) {
       id: 'db-fences-fill',
       type: 'fill',
       source: 'db-fences',
-      paint: { 'fill-color': '#6366F1', 'fill-opacity': 0.12 },
+      paint: { 'fill-color': '#6366F1', 'fill-opacity': 0.1 },
     })
     map.addLayer({
       id: 'db-fences-line',
       type: 'line',
       source: 'db-fences',
-      paint: { 'line-color': '#6366F1', 'line-width': 1.6, 'line-dasharray': [2, 2] },
+      paint: { 'line-color': '#6366F1', 'line-width': 2, 'line-dasharray': [2, 2] },
     })
   }
   if (!map.getSource('hq-links')) {
@@ -443,7 +437,7 @@ function addDeskLayers(map) {
       id: 'hq-links-line',
       type: 'line',
       source: 'hq-links',
-      paint: { 'line-color': '#8B5CF6', 'line-width': 2, 'line-opacity': 0.75 },
+      paint: { 'line-color': '#8B5CF6', 'line-width': 2, 'line-opacity': 0.7 },
     })
   }
   if (!map.getSource('flood')) {
@@ -452,13 +446,13 @@ function addDeskLayers(map) {
       id: 'flood-fill',
       type: 'fill',
       source: 'flood',
-      paint: { 'fill-color': '#6366F1', 'fill-opacity': 0.28 },
+      paint: { 'fill-color': '#6366F1', 'fill-opacity': 0.35 },
     })
     map.addLayer({
       id: 'flood-line',
       type: 'line',
       source: 'flood',
-      paint: { 'line-color': '#8B5CF6', 'line-width': 2.4, 'line-dasharray': [1.4, 0.8] },
+      paint: { 'line-color': '#4F46E5', 'line-width': 2.5, 'line-dasharray': [1.4, 0.8] },
     })
   }
   if (!map.getSource('radius')) {
@@ -469,7 +463,7 @@ function addDeskLayers(map) {
       source: 'radius',
       paint: {
         'fill-color': ['case', ['==', ['get', 'hot'], true], '#F97316', '#8B5CF6'],
-        'fill-opacity': 0.18,
+        'fill-opacity': 0.2,
       },
     })
     map.addLayer({
@@ -478,7 +472,7 @@ function addDeskLayers(map) {
       source: 'radius',
       paint: {
         'line-color': ['case', ['==', ['get', 'hot'], true], '#F97316', '#6366F1'],
-        'line-width': ['case', ['==', ['get', 'hot'], true], 2.6, 2],
+        'line-width': ['case', ['==', ['get', 'hot'], true], 2.8, 2.2],
         'line-dasharray': [2, 2],
       },
     })
@@ -489,7 +483,7 @@ function addDeskLayers(map) {
       id: 'asset-link-line',
       type: 'line',
       source: 'asset-link',
-      paint: { 'line-color': '#EC4899', 'line-width': 3.2, 'line-dasharray': [2.4, 1] },
+      paint: { 'line-color': '#EC4899', 'line-width': 4, 'line-opacity': 0.9 },
     })
   }
 }
