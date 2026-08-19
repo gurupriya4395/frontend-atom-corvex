@@ -185,6 +185,8 @@ export default function GlobeMap({
           <div className="hud">
             <div className="legend">
               <h4>World</h4>
+              <div className="lg">Icon = event type</div>
+              <div className="lg">Ring = linked / high impact</div>
               <div className="lg">Arc = event → site</div>
               <div className="lg">Dashed ring = fence</div>
               <div className="lg">Drag to look around</div>
@@ -335,6 +337,19 @@ function createWorld(el, getOnSelect) {
           pulseEventId === e.id ? 'is-pulse' : '',
         ),
       )
+      overlay.add(surfaceDot(e.coords[1], e.coords[0], colorFor(e)))
+      if (e.linked || e.impact === 'high' || pulseEventId === e.id) {
+        const size = pulseEventId === e.id ? 4 : e.impact === 'high' ? 3.6 : 3
+        overlay.add(
+          surfaceHalo(
+            e.coords[1],
+            e.coords[0],
+            size,
+            colorFor(e),
+            pulseEventId === e.id ? 0.48 : 0.3,
+          ),
+        )
+      }
       if (e.linked) {
         overlay.add(
           arc(
@@ -424,6 +439,33 @@ function htmlPin(lat, lng, html, onClick, extraClass = '') {
   const obj = new CSS2DObject(wrap)
   obj.position.copy(latLngToVec3(lat, lng, 0.02))
   return obj
+}
+
+function surfaceDot(lat, lng, color) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55, 10, 10),
+    new THREE.MeshBasicMaterial({ color }),
+  )
+  mesh.position.copy(latLngToVec3(lat, lng, 0.01))
+  return mesh
+}
+
+function surfaceHalo(lat, lng, size, color, opacity = 0.35) {
+  const geo = new THREE.RingGeometry(size * 0.84, size, 40)
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  )
+  const p = latLngToVec3(lat, lng, 0.012)
+  mesh.position.copy(p)
+  mesh.lookAt(0, 0, 0)
+  return mesh
 }
 
 function arc(lat0, lng0, lat1, lng1, color) {
@@ -544,4 +586,15 @@ function darken(hex, amt) {
   const g = Math.max(0, ((n >> 8) & 255) - amt)
   const b = Math.max(0, (n & 255) - amt)
   return `rgb(${r}, ${g}, ${b})`
+}
+
+function colorFor(e) {
+  if (e.kind === 'fire') return 0xff4d12
+  if (e.kind === 'flood') return 0x22c55e
+  if (e.kind === 'storm') return 0x38bdf8
+  if (e.kind === 'security') return 0xec4899
+  if (e.kind === 'protest') return 0x8b5cf6
+  if (e.kind === 'quake') return 0xe8d27a
+  if (e.kind === 'haze') return 0x94a3b8
+  return 0x6366f1
 }

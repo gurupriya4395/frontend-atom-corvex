@@ -1463,12 +1463,7 @@ td { border-bottom: 1px solid #1c2418; padding: 10px 8px; }
   overflow: hidden;
 }
 .globe-pin.is-pulse {
-  animation: desk-pulse 1.1s ease-out infinite;
   z-index: 4;
-}
-@keyframes desk-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
 }
 .globe-pin.is-hot .pin,
 .terrain-pin.is-hot .pin {
