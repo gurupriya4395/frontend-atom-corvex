@@ -101,9 +101,13 @@ export default function App() {
   const catsOn = Object.values(cats).some(Boolean)
   const sevsOn = Object.values(sevs).some(Boolean)
 
-  const filtered = timed.filter((e) => {
+  const onDesk = timed.filter((e) => {
     if (!cats[e.category] || !sevs[e.severity]) return false
     if (needle && !searchHay(e).includes(needle)) return false
+    return true
+  })
+
+  const filtered = onDesk.filter((e) => {
     if (siteFilterId) return e.linked && e.primary.asset.id === siteFilterId
     if (feedMode === 'watchlist') return e.alert || e.impact === 'high'
     if (feedMode === 'proximity') return e.linked
@@ -348,7 +352,7 @@ export default function App() {
         <div className="ops">
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
             <GlobeMap
-              events={filtered}
+              events={onDesk}
               assets={ASSETS}
               selected={selected}
               onSelect={(sel) => {
