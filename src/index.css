@@ -586,7 +586,7 @@ button { cursor: pointer; }
   color: var(--text);
 }
 .rail { left: 14px; }
-.feed { right: 14px; width: 318px; }
+.feed { right: 14px; width: 318px; z-index: 16; }
 .detail {
   position: absolute;
   right: 346px;
@@ -672,6 +672,8 @@ button { cursor: pointer; }
   color: var(--muted);
 }
 .time-strip .t1 { left: 50%; transform: translateX(-50%); color: var(--ink); font-weight: 600; }
+.time-strip .t0 { left: 0; }
+.time-strip .t2 { right: 0; }
 .time-strip .head {
   position: absolute;
   top: -4px;
@@ -680,9 +682,8 @@ button { cursor: pointer; }
   background: var(--fire);
   transform: translateX(-50%);
 }
-.time-strip .head.history { left: 8%; }
-.time-strip .head.live { left: 50%; }
-.time-strip .head.forecast { left: 92%; }
+.time-strip .head.live { left: 18%; }
+.time-strip .head.forecast { left: 82%; }
 .wire-toast {
   position: absolute;
   left: 50%;
@@ -931,6 +932,26 @@ button { cursor: pointer; }
   padding: 12px 14px 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
+}
+.feed-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.feed-title h2 {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.feed-title em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
 }
 .ticker span {
   font-family: 'Inter', system-ui, sans-serif;

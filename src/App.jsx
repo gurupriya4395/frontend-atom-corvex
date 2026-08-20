@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import SideRail from './SideRail'
-import { ASSETS, DEMO, EVENTS, INCOMING } from './data'
+import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import './index.css'
@@ -14,7 +14,6 @@ export default function App() {
   const enriched = useMemo(() => enrich(raw, ASSETS), [raw])
   const [page, setPage] = useState('operations')
   const [timeMode, setTimeMode] = useState('live')
-  const [horizon, setHorizon] = useState('all')
   const [feedMode, setFeedMode] = useState('proximity')
   const [q, setQ] = useState('')
   const [affectsOnly, setAffectsOnly] = useState(true)
@@ -92,36 +91,35 @@ export default function App() {
     return () => clearTimeout(t)
   }, [freshId, toast])
 
+  const TWO_DAYS_MS = 2 * 86400 * 1000
+  const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
+  const inNextTwoDays = (e) => {
+    const at = e.eventAt || e.publishedAt
+    return at > Date.now() && at <= Date.now() + TWO_DAYS_MS
+  }
+
   const timed = enriched.filter((e) => {
-    const isForecast = Boolean(e.forecast) || e.eventAt > Date.now()
-    if (timeMode === 'history') return e.publishedAt < Date.now() - 4 * 3600 * 1000 && !isForecast
-    if (timeMode === 'forecast') return isForecast
-    return true
+    if (timeMode === 'forecast') return isForecastEvent(e) && inNextTwoDays(e)
+    return !isForecastEvent(e)
   })
 
   const needle = q.trim().toLowerCase()
   const catsOn = Object.values(cats).some(Boolean)
   const sevsOn = Object.values(sevs).some(Boolean)
 
-  const prox = timed.filter((e) => {
+  const listed = timed.filter((e) => {
     if (!cats[e.category] || !sevs[e.severity]) return false
     if (needle && !searchHay(e).includes(needle)) return false
-    if (siteFilterId) return e.linked && e.primary.asset.id === siteFilterId
-    return e.linked
-  })
-
-  const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
-  const filtered = prox.filter((e) => {
-    if (horizon === 'live') return !isForecastEvent(e)
-    if (horizon === 'forecast') return isForecastEvent(e)
     return true
   })
+  const globeEvents = listed.filter((e) => e.flag === 'IN')
+  const filtered = listed
 
   const counts = {
     geo: timed.filter((e) => cats[e.category] && sevs[e.severity]).length,
-    prox: prox.length,
-    live: prox.filter((e) => !isForecastEvent(e)).length,
-    forecast: prox.filter((e) => isForecastEvent(e)).length,
+    prox: listed.length,
+    live: enriched.filter((e) => !isForecastEvent(e) && cats[e.category] && sevs[e.severity]).length,
+    forecast: enriched.filter((e) => isForecastEvent(e) && inNextTwoDays(e) && cats[e.category] && sevs[e.severity]).length,
     watch: timed.filter((e) => (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity]).length,
   }
 
@@ -137,22 +135,17 @@ export default function App() {
     : selectedEvent?.linked
       ? selectedEvent.primary.asset.id
       : selectedAssetId
-  const siteName = siteFilterId ? ASSETS.find((a) => a.id === siteFilterId)?.name : null
 
   const emptyHint = (() => {
     if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
     if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
-    if (timeMode === 'history') return 'Nothing older than 4h in this desk cut. Switch to Live.'
-    if (horizon === 'forecast') return 'No forecast events near our sites in this cut.'
-    if (horizon === 'live') return 'No live events near our sites in this cut.'
-    if (siteFilterId) return `No hits on ${siteName}.`
-    return 'No live or forecast events near our sites in this cut.'
+    if (timeMode === 'forecast') return 'No forecast events in the next 2 days.'
+    return 'No live events on the desk right now.'
   })()
 
   const pickEvent = (id, opts = {}) => {
     setSelectedId(id)
     setSelectedAssetId(null)
-    setSiteFilterId(null)
     setPage('operations')
     if (opts.map) setMapMode('map')
   }
@@ -267,11 +260,8 @@ export default function App() {
           <span className="brand-sub">Eyes on operations</span>
         </div>
         <nav className="nav">
-          <button className={page === 'operations' ? 'active' : ''} onClick={() => setPage('operations')}>
+          <button className="active" type="button" onClick={() => setPage('operations')}>
             Floor
-          </button>
-          <button className={page === 'assets' ? 'active' : ''} onClick={() => setPage('assets')}>
-            Sites
           </button>
         </nav>
         <div className="top-right">
@@ -292,76 +282,13 @@ export default function App() {
         </div>
       </header>
 
-      {page === 'assets' ? (
-        <div className="assets-page">
-          <header className="assets-head">
-            <div>
-              <h2>Registered sites</h2>
-              <p className="stamp">Exposure on the book — click a site to throw its fence and filter the desk.</p>
-            </div>
-            <span className="stamp">{ASSETS.length} assets · DB HQs worldwide</span>
-          </header>
-          <div className="site-grid">
-            {ASSETS.map((a) => {
-              const hits = enriched.filter((e) => e.linked && e.primary.asset.id === a.id)
-              const hot = hits.find((e) => e.alert)
-              return (
-                <article
-                  key={a.id}
-                  className={`site-card ${hot ? 'hot' : ''}`}
-                  onClick={() => pickAsset(a.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      pickAsset(a.id)
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="site-ring" aria-hidden>
-                    <i style={{ '--r': `${Math.min(100, a.radiusKm * 2.2)}%` }} />
-                  </div>
-                  <div className="site-body">
-                    <div className="meta">
-                      <span className={`chip ${a.criticality}`}>{a.criticality}</span>
-                      <span className="chip">{a.type}</span>
-                    </div>
-                    <h3>{a.name}</h3>
-                    <p>
-                      {a.city}, {a.country}
-                    </p>
-                    {hot ? (
-                      <p className="site-hotline">
-                        {hot.kind} · {hot.primary.km.toFixed(1)} km · {hot.title}
-                      </p>
-                    ) : (
-                      <p className="site-hotline quiet">Quiet — no open alert</p>
-                    )}
-                    <div className="site-stats">
-                      <span>
-                        Fence <b>{a.radiusKm} km</b>
-                      </span>
-                      <span>
-                        Hits <b>{hits.length}</b>
-                      </span>
-                      <span className={hot ? 'hot' : ''}>
-                        <span className={`status-dot ${hot ? 'hot' : ''}`} />
-                        {hot ? 'Hot' : 'Quiet'}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="ops">
+      <div className="ops">
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
             <GlobeMap
-              events={filtered}
-              assets={ASSETS}
+              events={globeEvents}
+              assets={GLOBE_ASSETS}
+              mapEvents={filtered}
+              mapAssets={ASSETS}
               selected={selected}
               onSelect={(sel) => {
                 if (!sel) {
@@ -416,10 +343,7 @@ export default function App() {
             counts={counts}
             freshId={freshId}
             timeMode={timeMode}
-            siteName={siteName}
             emptyHint={emptyHint}
-            horizon={horizon}
-            onHorizon={setHorizon}
           />
 
           {toast && (
@@ -438,26 +362,22 @@ export default function App() {
               className="track"
               onClick={(e) => {
                 const x = e.nativeEvent.offsetX / e.currentTarget.clientWidth
-                if (x < 0.36) setTimeMode('history')
-                else if (x > 0.64) setTimeMode('forecast')
-                else setTimeMode('live')
+                setTimeMode(x > 0.5 ? 'forecast' : 'live')
               }}
             >
               <i className={`head ${timeMode}`} />
-              <span className="t0">−24h</span>
-              <span className="t1">now</span>
-              <span className="t2">+90d</span>
+              <span className="t0">now</span>
+              <span className="t2">+2d</span>
             </div>
             <div className="time-dock">
-              {['live', 'forecast', 'history'].map((m) => (
-                <button key={m} className={timeMode === m ? 'active' : ''} onClick={() => setTimeMode(m)}>
+              {['live', 'forecast'].map((m) => (
+                <button key={m} type="button" className={timeMode === m ? 'active' : ''} onClick={() => setTimeMode(m)}>
                   {m}
                 </button>
               ))}
             </div>
           </div>
         </div>
-      )}
     </div>
   )
 }

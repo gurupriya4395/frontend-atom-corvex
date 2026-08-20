@@ -5,41 +5,20 @@ function isForecastEvent(ev) {
   return Boolean(ev.forecast) || ev.eventAt > Date.now()
 }
 
-export default function EventFeed({
-  events,
-  selectedId,
-  onSelect,
-  now,
-  counts,
-  freshId,
-  timeMode,
-  siteName,
-  emptyHint,
-  horizon = 'all',
-  onHorizon,
-}) {
+export default function EventFeed({ events, selectedId, onSelect, now, counts, freshId, timeMode, emptyHint }) {
+  const modeLabel = timeMode === 'forecast' ? 'Forecast · next 2 days' : 'Live'
+  const n = timeMode === 'forecast' ? counts.forecast : counts.live
+
   return (
     <aside className="feed">
       <div className="feed-head">
-        <div className="feed-tabs">
-          {[
-            ['live', 'Live', counts.live],
-            ['forecast', 'Forecast', counts.forecast],
-          ].map(([id, label, n]) => (
-            <button
-              key={id}
-              type="button"
-              className={horizon === 'all' || horizon === id ? 'active' : ''}
-              onClick={() => onHorizon?.(horizon === id ? 'all' : id)}
-            >
-              {label}
-              <em>{n ?? 0}</em>
-            </button>
-          ))}
+        <div className="feed-title">
+          <h2>Proximity</h2>
+          <em>{n ?? events.length}</em>
         </div>
         <div className="feed-meta">
           <span className="live-dot" />
-          <span>{siteName ? `Site · ${siteName}` : `${timeMode} desk`}</span>
+          <span>{modeLabel}</span>
           <span>{now.toLocaleTimeString('en-GB', { hour12: false })}</span>
         </div>
       </div>
@@ -52,6 +31,7 @@ export default function EventFeed({
           return (
             <button
               key={ev.id}
+              type="button"
               className={`card kind-${ev.kind} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''}`}
               style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
               onClick={() => onSelect(ev.id)}

@@ -545,4 +545,4 @@ export const DEMO = {
 export const isIndiaEvent = (e) => e?.flag === 'IN'
 export const isIndiaAsset = (a) => a?.country === 'India'
 export const INDIA_ASSETS = ASSETS.filter(isIndiaAsset)
-export const INDIA_EVENTS = EVENTS.filter(isIndiaEvent)
+export const GLOBE_ASSETS = ASSETS.filter((a) => a.country === 'India' || a.org === 'deutsche-bank')

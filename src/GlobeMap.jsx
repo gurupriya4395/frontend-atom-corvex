@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
+import { eventMarkerHtml, assetMarkerHtml } from './markers'
 
 const R = 100
 
 export default function GlobeMap({
   events,
   assets,
+  mapEvents,
+  mapAssets,
   selected,
   onSelect,
   showRadiusFor,
@@ -124,8 +126,8 @@ export default function GlobeMap({
       <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
         {mode === 'map' && MapView && (
           <MapView
-            events={events}
-            assets={assets}
+            events={mapEvents || events}
+            assets={mapAssets || assets}
             selected={selected}
             onSelect={onSelect}
             showRadiusFor={showRadiusFor}
@@ -331,46 +333,24 @@ function createWorld(el, getOnSelect) {
       overlay.add(fenceRing(fence.coords[1], fence.coords[0], fence.radiusKm, 0xc4a574))
     }
     for (const e of events) {
-      const isSelected = selected?.type === 'event' && selected.id === e.id
       overlay.add(
         htmlPin(
           e.coords[1],
           e.coords[0],
-          eventMarkerHtml(e) + (isSelected ? eventBriefHtml(e) : ''),
+          eventMarkerHtml(e),
           () => getOnSelect()?.({ type: 'event', id: e.id }),
-          `${pulseEventId === e.id ? 'is-pulse' : ''}${isSelected ? ' is-selected' : ''}`.trim(),
+          pulseEventId === e.id ? 'is-pulse' : '',
         ),
       )
       overlay.add(surfaceDot(e.coords[1], e.coords[0], colorFor(e)))
-      if (e.linked || e.impact === 'high' || pulseEventId === e.id) {
-        const size = pulseEventId === e.id ? 4 : e.impact === 'high' ? 3.6 : 3
+      if (e.impact === 'high' || pulseEventId === e.id) {
         overlay.add(
           surfaceHalo(
             e.coords[1],
             e.coords[0],
-            size,
+            pulseEventId === e.id ? 4 : 3.6,
             colorFor(e),
             pulseEventId === e.id ? 0.48 : 0.3,
-          ),
-        )
-      }
-      if (e.linked) {
-        overlay.add(
-          dashedArc(
-            e.coords[1],
-            e.coords[0],
-            e.primary.asset.coords[1],
-            e.primary.asset.coords[0],
-            e.impact === 'high' ? 0xff4d12 : 0x0f172a,
-          ),
-        )
-        overlay.add(
-          htmlPin(
-            (e.coords[1] + e.primary.asset.coords[1]) / 2,
-            (e.coords[0] + e.primary.asset.coords[0]) / 2,
-            `<span class="dist-chip">${Number(e.primary.km).toFixed(1)} km</span>`,
-            () => {},
-            'is-dist',
           ),
         )
       }
