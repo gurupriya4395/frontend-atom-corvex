@@ -1,0 +1,17 @@
+{
+  "name": "ATOM-CORVEX frontend",
+  "install": "npm install",
+  "terminals": [
+    {
+      "name": "vite",
+      "command": "npm run dev -- --host 0.0.0.0 --port 5173",
+      "description": "Vite dev server for the operations desk UI"
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 5173
+    }
+  ]
+}
