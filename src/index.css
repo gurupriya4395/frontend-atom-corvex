@@ -930,11 +930,16 @@ button { cursor: pointer; }
   line-height: 1.3;
   color: var(--ink);
 }
-.card .why {
-  margin: 0;
+.card .asset-hit {
+  margin: 6px 0 0;
   font-size: 12px;
+  font-weight: 600;
+  color: #4f46e5;
+}
+.card .card-date {
+  margin: 4px 0 0;
+  font-size: 11px;
   color: var(--muted);
-  line-height: 1.4;
 }
 .chip {
   padding: 2px 8px;
@@ -1474,39 +1479,18 @@ td { border-bottom: 1px solid #1c2418; padding: 10px 8px; }
   box-shadow: 0 0 0 4px rgba(212, 86, 42, 0.35);
 }
 .dist-chip {
-  min-width: 148px;
-  padding: 8px 12px;
+  padding: 4px 10px;
   background: #ffffff;
-  border: 1px solid #fdba74;
-  border-radius: 12px;
-  color: #9a3412;
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  box-shadow: 0 12px 28px rgba(234, 88, 12, 0.18);
-  pointer-events: none;
-  text-align: center;
-}
-.dist-chip em {
-  display: block;
-  font-style: normal;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #c2410c;
-}
-.dist-chip b {
-  display: block;
-  font-size: 18px;
+  border: 1px solid #111827;
+  border-radius: 999px;
+  color: #111827;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
   font-weight: 700;
-  color: #9a3412;
-  letter-spacing: -0.02em;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+  pointer-events: none;
+  white-space: nowrap;
 }
-.dist-chip span {
-  display: block;
-  font-size: 10px;
-  color: #78716c;
-}
-.dist-chip.sev-high { border-color: #fca5a5; color: #b91c1c; box-shadow: 0 12px 28px rgba(185, 28, 28, 0.16); }
-.dist-chip.sev-high b, .dist-chip.sev-high em { color: #b91c1c; }
 .impact-stage {
   position: absolute;
   inset: 0;

@@ -118,6 +118,7 @@
 
 .terrain-ev,
 .terrain-pin {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -126,18 +127,20 @@
 }
 .terrain-ev.is-selected {
   z-index: 20;
-  align-items: flex-start;
 }
 .ev-brief {
-  width: 268px;
-  max-width: min(268px, 72vw);
-  margin-top: 4px;
-  padding: 12px;
+  position: absolute;
+  left: 48px;
+  top: -6px;
+  width: 280px;
+  max-width: min(280px, 64vw);
+  margin-top: 0;
+  padding: 12px 14px;
   background: #ffffff;
-  border: 1px solid #e4e7ff;
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
   color: #0f172a;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
   text-align: left;
   pointer-events: auto;
 }
@@ -167,10 +170,14 @@
   line-height: 1.45;
   color: #475569;
 }
-.ev-brief-dist {
-  font-weight: 600 !important;
-  color: #4f46e5 !important;
+.ev-brief-asset,
+.ev-brief-date {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
 }
+.ev-brief-date { color: #64748b; font-weight: 500; }
 .ev-source {
   display: inline-block;
   font-size: 12px;

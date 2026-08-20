@@ -174,19 +174,7 @@ export default function MapView({
 
     const links = map.getSource('hq-links')
     if (links) {
-      links.setData({
-        type: 'FeatureCollection',
-        features:
-          liveOrForecast && !scene.flood
-            ? events
-                .filter((e) => e.db)
-                .map((e) => ({
-                  type: 'Feature',
-                  geometry: { type: 'LineString', coordinates: [e.db.hq.coords, e.coords] },
-                  properties: { id: e.id },
-                }))
-            : [],
-      })
+      links.setData({ type: 'FeatureCollection', features: [] })
     }
 
     const radius = map.getSource('radius')
@@ -209,27 +197,32 @@ export default function MapView({
     const flood = map.getSource('flood')
     if (flood) flood.setData({ type: 'FeatureCollection', features: scene.flood ? [MUMBAI_FLOOD_ZONE] : [] })
 
-    const linkedHits = events.filter((e) => e.linked && e.primary?.asset)
+    const focus = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
+    const pair = focus?.primary?.asset
     const link = map.getSource('asset-link')
     if (link) {
       link.setData({
         type: 'FeatureCollection',
-        features: linkedHits.map((e) => ({
-          type: 'Feature',
-          properties: { id: e.id, high: e.impact === 'high' },
-          geometry: { type: 'LineString', coordinates: [e.coords, e.primary.asset.coords] },
-        })),
+        features:
+          focus && pair
+            ? [
+                {
+                  type: 'Feature',
+                  geometry: { type: 'LineString', coordinates: [focus.coords, pair.coords] },
+                },
+              ]
+            : [],
       })
     }
 
-    linkedHits.forEach((e) => {
-      const km = e.primary.km
-      const mid = [(e.coords[0] + e.primary.asset.coords[0]) / 2, (e.coords[1] + e.primary.asset.coords[1]) / 2]
+    if (focus && pair) {
+      const km = focus.primary.km
+      const mid = [(focus.coords[0] + pair.coords[0]) / 2, (focus.coords[1] + pair.coords[1]) / 2]
       const chip = document.createElement('div')
-      chip.className = `dist-chip sev-${e.severity || 'low'}`
-      chip.innerHTML = `<em>Event → asset</em><b>${km.toFixed(1)} km</b><span>${escapeHtml(e.primary.asset.name)}</span>`
+      chip.className = 'dist-chip'
+      chip.textContent = `${km.toFixed(1)} km`
       markersRef.current.push(new Marker({ element: chip, anchor: 'center' }).setLngLat(mid).addTo(map))
-    })
+    }
   }, [
     events,
     assets,
@@ -250,14 +243,17 @@ export default function MapView({
     const target =
       selected.type === 'event' ? evs.find((e) => e.id === selected.id) : asts.find((a) => a.id === selected.id)
     if (!target) return
-    const cinematic = scene.flood || scene.distance || scene.warehouse
-    const zoom = cinematic ? (scene.distance ? 12.2 : 11.6) : selected.type === 'event' ? 11.4 : 10
+    const asset = selected.type === 'event' ? target.primary?.asset : null
+    if (asset) {
+      map.fitBounds([target.coords, asset.coords], { padding: 100, maxZoom: 13, duration: 1100 })
+      return
+    }
     map.flyTo({
       center: target.coords,
-      zoom,
-      pitch: cinematic ? 42 : 0,
+      zoom: 12,
+      pitch: 0,
       bearing: 0,
-      duration: 1200,
+      duration: 1100,
       essential: true,
     })
   }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready])
@@ -404,10 +400,10 @@ function addDeskLayers(map) {
       type: 'line',
       source: 'asset-link',
       paint: {
-        'line-color': ['case', ['==', ['get', 'high'], true], '#F97316', '#EC4899'],
-        'line-width': 2.6,
-        'line-opacity': 0.92,
-        'line-dasharray': [2.2, 1.4],
+        'line-color': '#0f172a',
+        'line-width': 2.4,
+        'line-opacity': 0.95,
+        'line-dasharray': [2, 1.4],
       },
     })
   }
@@ -426,11 +422,4 @@ function circlePoly([lng, lat], km, steps = 64) {
     coords.push([lng + dx, lat + dy])
   }
   return coords
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
 }

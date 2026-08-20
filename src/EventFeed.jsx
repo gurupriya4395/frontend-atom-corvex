@@ -1,10 +1,8 @@
 import { eventMarkerHtml } from './markers'
-import { relativeTime, soWhat } from './scoring'
+import { clock } from './scoring'
 
 export default function EventFeed({
   events,
-  mode,
-  onMode,
   selectedId,
   onSelect,
   now,
@@ -14,26 +12,14 @@ export default function EventFeed({
   siteName,
   emptyHint,
 }) {
-  const headline = events[0] ? soWhat(events[0]).line : 'Waiting on the wire…'
-
   return (
     <aside className="feed">
       <div className="feed-head">
-        <div className="ticker" key={headline}>
-          <span>ON WIRE</span>
-          <p>{headline}</p>
-        </div>
         <div className="feed-tabs">
-          {[
-            ['geographical', 'Geo', counts.geo],
-            ['proximity', 'Prox', counts.prox],
-            ['watchlist', 'Watch', counts.watch],
-          ].map(([m, label, n]) => (
-            <button key={m} className={mode === m ? 'active' : ''} onClick={() => onMode(m)}>
-              {label}
-              <em>{n}</em>
-            </button>
-          ))}
+          <button className="active" type="button">
+            Prox
+            <em>{counts.prox}</em>
+          </button>
         </div>
         <div className="feed-meta">
           <span className="live-dot" />
@@ -44,12 +30,12 @@ export default function EventFeed({
       <div className="cards">
         {events.length === 0 && <div className="empty">{emptyHint}</div>}
         {events.map((ev, i) => {
-          const sw = soWhat(ev)
-          const latest = ev.updates?.length ? ev.updates[ev.updates.length - 1] : null
+          const assetName = ev.primary?.asset?.name
+          const when = clock(ev.eventAt || ev.publishedAt)
           return (
             <button
               key={ev.id}
-              className={`card kind-${ev.kind} impact-${ev.impact || 'none'} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''}`}
+              className={`card kind-${ev.kind} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''}`}
               style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
               onClick={() => onSelect(ev.id)}
             >
@@ -57,18 +43,16 @@ export default function EventFeed({
               <span className="card-body">
                 <div className="card-kicker">
                   <span className={`chip ${ev.severity}`}>{ev.severity}</span>
-                  {ev.forecast && <span className="chip">forecast</span>}
-                  {ev.alert && <span className="chip high">alert</span>}
-                  <span className="ago">{relativeTime(ev.publishedAt)}</span>
+                  <span className="ago">{when}</span>
                 </div>
-                <p className={`so-line ${sw.verdict}`}>{sw.line}</p>
                 <h3>{ev.title}</h3>
-                <p className="why">{sw.why}</p>
-                {mode === 'watchlist' && latest && (
-                  <div className="latest">
-                    <em>Latest</em> {latest.text}
-                  </div>
+                <p className="why">{ev.summary || ev.why}</p>
+                {assetName && (
+                  <p className="asset-hit">
+                    Asset affected · {assetName}
+                  </p>
                 )}
+                <p className="card-date">{when}</p>
               </span>
             </button>
           )

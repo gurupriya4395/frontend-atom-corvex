@@ -105,10 +105,7 @@ export default function App() {
     if (!cats[e.category] || !sevs[e.severity]) return false
     if (needle && !searchHay(e).includes(needle)) return false
     if (siteFilterId) return e.linked && e.primary.asset.id === siteFilterId
-    if (feedMode === 'watchlist') return e.alert || e.impact === 'high'
-    if (feedMode === 'proximity') return e.linked
-    if (affectsOnly) return e.linked
-    return true
+    return e.linked
   })
 
   const counts = {
@@ -136,9 +133,8 @@ export default function App() {
     if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
     if (timeMode === 'history') return 'Nothing older than 4h in this desk cut. Switch to Live.'
     if (timeMode === 'forecast') return 'No forecast items in this cut.'
-    if (siteFilterId) return `No live hits on ${siteName}. Open Geo or pick another site.`
-    if (feedMode === 'proximity') return 'Nothing near our sites. Open Geo, or switch off “Near our sites”.'
-    if (feedMode === 'watchlist') return 'No watch alerts in this cut.'
+    if (siteFilterId) return `No live hits on ${siteName}.`
+    return 'Nothing near our sites in this cut.'
     return 'Nothing in this cut.'
   })()
 
@@ -155,8 +151,7 @@ export default function App() {
     setSelectedId(null)
     setSiteFilterId(id)
     setPage('operations')
-    setAffectsOnly(false)
-    setFeedMode('geographical')
+    setFeedMode('proximity')
     if (opts.map) setMapMode('map')
   }
 
@@ -398,13 +393,6 @@ export default function App() {
 
           <EventFeed
             events={filtered}
-            mode={feedMode}
-            onMode={(m) => {
-              setFeedMode(m)
-              setSiteFilterId(null)
-              if (m === 'proximity') setAffectsOnly(true)
-              if (m === 'geographical') setAffectsOnly(false)
-            }}
             selectedId={selectedId}
             onSelect={(id) => pickEvent(id, { map: true })}
             now={now}

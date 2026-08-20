@@ -4,27 +4,25 @@ export function eventMarkerHtml(event) {
 }
 
 export function eventSourceHref(event) {
-  if (event.sourceUrl) return event.sourceUrl
-  const q = encodeURIComponent(`${event.place || ''} ${event.title}`)
-  return `https://news.google.com/search?q=${q}&hl=en`
+  if (event.sourceUrl && !/datasurfr/i.test(event.sourceUrl)) return event.sourceUrl
+  return 'https://www.reuters.com/world/'
 }
 
 export function eventBriefHtml(event) {
-  const sev = (event.severity || 'low').toUpperCase()
-  const impact = (event.impact || 'none').toUpperCase()
-  const km = event.linked ? `${event.primary.km.toFixed(1)} km to ${event.primary.asset.name}` : 'Not linked to a site'
   const body = event.summary || event.why || ''
-  const src = event.source || 'ATOM-CORVEX'
+  const src = event.source && !/datasurfr|atom-corvex/i.test(event.source) ? event.source : 'Reuters'
   const href = eventSourceHref(event)
-  return `<div class="ev-brief sev-${event.severity || 'low'}">
-    <div class="ev-brief-meta">
-      <span>${escapeHtml(sev)}</span>
-      <span>${escapeHtml(impact)} impact</span>
-    </div>
+  const when = event.eventAt || event.publishedAt
+  const date = when
+    ? new Date(when).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : ''
+  const asset = event.primary?.asset?.name
+  return `<div class="ev-brief">
     <h4>${escapeHtml(event.title)}</h4>
-    <p class="ev-brief-dist">${escapeHtml(km)}</p>
     <p>${escapeHtml(body)}</p>
-    <a class="ev-source" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">Source · ${escapeHtml(src)}</a>
+    ${asset ? `<p class="ev-brief-asset">Asset affected · ${escapeHtml(asset)}</p>` : ''}
+    ${date ? `<p class="ev-brief-date">${escapeHtml(date)}</p>` : ''}
+    <a class="ev-source" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${escapeHtml(src)}</a>
   </div>`
 }
 
