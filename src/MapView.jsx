@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AttributionControl, Map, Marker, NavigationControl } from 'maplibre-gl'
+import { AttributionControl, LngLatBounds, Map, Marker, NavigationControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
 import { MUMBAI_FLOOD_ZONE } from './data'
@@ -50,7 +50,7 @@ export default function MapView({
 
   useEffect(() => {
     const el = wrapRef.current
-    if (!el || !active) return
+    if (!el) return
     let map
     let cancelled = false
 
@@ -107,7 +107,7 @@ export default function MapView({
       mapRef.current = null
       setReady(false)
     }
-  }, [tick, active])
+  }, [tick])
 
   useEffect(() => {
     const map = mapRef.current
@@ -197,7 +197,10 @@ export default function MapView({
     const flood = map.getSource('flood')
     if (flood) flood.setData({ type: 'FeatureCollection', features: scene.flood ? [MUMBAI_FLOOD_ZONE] : [] })
 
-    const pairs = events.filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords))
+    const focusEvent = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
+    const pairs = (focusEvent?.linked && focusEvent.primary?.asset
+      ? [focusEvent]
+      : events.filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords)))
     const link = map.getSource('asset-link')
     if (link) {
       link.setData({
@@ -244,35 +247,24 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !ready || !selected?.id) return
-    const { events: evs, assets: asts } = dataRef.current
-    const target =
-      selected.type === 'event' ? evs.find((e) => e.id === selected.id) : asts.find((a) => a.id === selected.id)
-    if (!target) return
-    const asset = selected.type === 'event' ? target.primary?.asset : null
-    if (asset) {
-      map.fitBounds([target.coords, asset.coords], {
-        padding: { top: 120, bottom: 140, left: 80, right: 320 },
-        maxZoom: 14,
-        duration: 1100,
-      })
-      return
-    }
-    map.flyTo({
-      center: target.coords,
-      zoom: 12,
-      pitch: 0,
-      bearing: 0,
-      duration: 1100,
-      essential: true,
-    })
-  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready])
+    if (!map || !ready || !active || !selected?.id) return
+    const focus = () => focusSelection(map, dataRef.current)
+    focus()
+    const later = [80, 240, 480].map((ms) => setTimeout(focus, ms))
+    return () => later.forEach(clearTimeout)
+  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready, active])
 
   useEffect(() => {
     if (!active) return
-    const t = setTimeout(() => mapRef.current?.resize(), 50)
-    return () => clearTimeout(t)
-  }, [active])
+    const map = mapRef.current
+    const t = [40, 160, 400].map((ms) =>
+      setTimeout(() => {
+        map?.resize()
+        if (ready) focusSelection(map, dataRef.current)
+      }, ms),
+    )
+    return () => t.forEach(clearTimeout)
+  }, [active, ready])
 
   const zoomOut = () => {
     mapRef.current?.flyTo({
@@ -432,11 +424,31 @@ function addDeskLayers(map) {
   }
 }
 
+function focusSelection(map, { events, assets, selected }) {
+  if (!map || !selected?.id) return
+  const target =
+    selected.type === 'event' ? events.find((e) => e.id === selected.id) : assets.find((a) => a.id === selected.id)
+  if (!target?.coords) return
+  const extra = selected.type === 'event' ? target.primary?.asset?.coords : null
+  const bounds = new LngLatBounds(target.coords, target.coords)
+  if (extra) bounds.extend(extra)
+  else {
+    bounds.extend([target.coords[0] - 0.04, target.coords[1] - 0.04])
+    bounds.extend([target.coords[0] + 0.04, target.coords[1] + 0.04])
+  }
+  map.fitBounds(bounds, {
+    padding: { top: 96, bottom: 100, left: 300, right: 360 },
+    maxZoom: 13,
+    duration: 900,
+    essential: true,
+  })
+}
+
 function paintDeskHud(map, host, events, selected) {
   if (!map || !host) return
   const pairs = (events || []).filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords))
   let focus = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
-  if (!focus?.linked) focus = pairs[0] || null
+  if (!focus) focus = pairs[0] || null
 
   const w = host.clientWidth || map.getContainer().clientWidth
   const h = host.clientHeight || map.getContainer().clientHeight

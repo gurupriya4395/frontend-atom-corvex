@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import SideRail from './SideRail'
-import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INCOMING } from './data'
+import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import './index.css'
@@ -108,19 +108,23 @@ export default function App() {
   const sevsOn = Object.values(sevs).some(Boolean)
 
   const listed = timed.filter((e) => {
+    if (e.flag !== 'IN') return false
     if (!cats[e.category] || !sevs[e.severity]) return false
     if (needle && !searchHay(e).includes(needle)) return false
     return true
   })
-  const globeEvents = listed.filter((e) => e.flag === 'IN')
+  const globeEvents = listed
   const filtered = listed
 
   const counts = {
-    geo: timed.filter((e) => cats[e.category] && sevs[e.severity]).length,
+    geo: timed.filter((e) => e.flag === 'IN' && cats[e.category] && sevs[e.severity]).length,
     prox: listed.length,
-    live: enriched.filter((e) => !isForecastEvent(e) && cats[e.category] && sevs[e.severity]).length,
-    forecast: enriched.filter((e) => isForecastEvent(e) && inNextTwoDays(e) && cats[e.category] && sevs[e.severity]).length,
-    watch: timed.filter((e) => (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity]).length,
+    live: enriched.filter((e) => e.flag === 'IN' && !isForecastEvent(e) && cats[e.category] && sevs[e.severity]).length,
+    forecast: enriched.filter(
+      (e) => e.flag === 'IN' && isForecastEvent(e) && inNextTwoDays(e) && cats[e.category] && sevs[e.severity],
+    ).length,
+    watch: timed.filter((e) => e.flag === 'IN' && (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity])
+      .length,
   }
 
   const selectedEvent = enriched.find((e) => e.id === selectedId)
@@ -288,7 +292,7 @@ export default function App() {
               events={globeEvents}
               assets={GLOBE_ASSETS}
               mapEvents={filtered}
-              mapAssets={ASSETS}
+              mapAssets={INDIA_ASSETS}
               selected={selected}
               onSelect={(sel) => {
                 if (!sel) {

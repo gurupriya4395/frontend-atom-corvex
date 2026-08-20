@@ -124,7 +124,7 @@ export default function GlobeMap({
       </div>
       <div className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`} ref={hostRef} />
       <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
-        {mode === 'map' && MapView && (
+        {MapView && (
           <MapView
             events={mapEvents || events}
             assets={mapAssets || assets}
