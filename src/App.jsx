@@ -14,6 +14,7 @@ export default function App() {
   const enriched = useMemo(() => enrich(raw, ASSETS), [raw])
   const [page, setPage] = useState('operations')
   const [timeMode, setTimeMode] = useState('live')
+  const [horizon, setHorizon] = useState('all')
   const [feedMode, setFeedMode] = useState('proximity')
   const [q, setQ] = useState('')
   const [affectsOnly, setAffectsOnly] = useState(true)
@@ -92,25 +93,35 @@ export default function App() {
   }, [freshId, toast])
 
   const timed = enriched.filter((e) => {
-    if (timeMode === 'forecast') return e.forecast || e.eventAt > Date.now()
-    if (timeMode === 'history') return e.publishedAt < Date.now() - 4 * 3600 * 1000 && !e.forecast
-    return !e.forecast
+    const isForecast = Boolean(e.forecast) || e.eventAt > Date.now()
+    if (timeMode === 'history') return e.publishedAt < Date.now() - 4 * 3600 * 1000 && !isForecast
+    if (timeMode === 'forecast') return isForecast
+    return true
   })
 
   const needle = q.trim().toLowerCase()
   const catsOn = Object.values(cats).some(Boolean)
   const sevsOn = Object.values(sevs).some(Boolean)
 
-  const filtered = timed.filter((e) => {
+  const prox = timed.filter((e) => {
     if (!cats[e.category] || !sevs[e.severity]) return false
     if (needle && !searchHay(e).includes(needle)) return false
     if (siteFilterId) return e.linked && e.primary.asset.id === siteFilterId
     return e.linked
   })
 
+  const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
+  const filtered = prox.filter((e) => {
+    if (horizon === 'live') return !isForecastEvent(e)
+    if (horizon === 'forecast') return isForecastEvent(e)
+    return true
+  })
+
   const counts = {
     geo: timed.filter((e) => cats[e.category] && sevs[e.severity]).length,
-    prox: timed.filter((e) => e.linked && cats[e.category] && sevs[e.severity]).length,
+    prox: prox.length,
+    live: prox.filter((e) => !isForecastEvent(e)).length,
+    forecast: prox.filter((e) => isForecastEvent(e)).length,
     watch: timed.filter((e) => (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity]).length,
   }
 
@@ -132,10 +143,10 @@ export default function App() {
     if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
     if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
     if (timeMode === 'history') return 'Nothing older than 4h in this desk cut. Switch to Live.'
-    if (timeMode === 'forecast') return 'No forecast items in this cut.'
-    if (siteFilterId) return `No live hits on ${siteName}.`
-    return 'Nothing near our sites in this cut.'
-    return 'Nothing in this cut.'
+    if (horizon === 'forecast') return 'No forecast events near our sites in this cut.'
+    if (horizon === 'live') return 'No live events near our sites in this cut.'
+    if (siteFilterId) return `No hits on ${siteName}.`
+    return 'No live or forecast events near our sites in this cut.'
   })()
 
   const pickEvent = (id, opts = {}) => {
@@ -401,6 +412,8 @@ export default function App() {
             timeMode={timeMode}
             siteName={siteName}
             emptyHint={emptyHint}
+            horizon={horizon}
+            onHorizon={setHorizon}
           />
 
           {toast && (
