@@ -26,7 +26,7 @@ export function travelFromHq(km) {
 }
 
 export function nearestHq(event, hqs) {
-  if (!hqs?.length) return null
+  if (!hqs?.length || !event.coords) return null
   const ranked = hqs
     .map((hq) => ({ hq, km: haversineKm(event.coords, hq.coords) }))
     .sort((a, b) => a.km - b.km)
@@ -40,7 +40,11 @@ export function nearestHq(event, hqs) {
 }
 
 export function correlate(event, assets) {
+  if (!event.coords) {
+    return { linked: false, hits: [], impact: null, raw: 0, factors: null, alert: false }
+  }
   const hits = assets
+    .filter((asset) => Array.isArray(asset.coords))
     .map((asset) => {
       const km = haversineKm(event.coords, asset.coords)
       return { asset, km, inside: km <= asset.radiusKm }

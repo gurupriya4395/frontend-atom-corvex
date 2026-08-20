@@ -195,6 +195,10 @@ export const EVENTS = [
     title: 'Flash flooding across central Mumbai after extreme rainfall',
     summary:
       'BMC issued a red alert as several arterial roads and the warehouse district near Andheri East reported knee-deep water. Local rail slowdowns and last-mile trucking delays are expected through the evening tide cycle.',
+    place: 'Mumbai, Maharashtra, India',
+    flag: 'IN',
+    coords: [72.869, 19.089],
+    severity: 'high',
     source: 'The Times of India',
     sourceUrl: 'https://timesofindia.indiatimes.com/india',
     publishedAt: hoursAgo(0.3),
@@ -213,6 +217,10 @@ export const EVENTS = [
     title: 'Industrial fire at chemical godown, Thane–Bhiwandi corridor',
     summary:
       'A warehouse fire is burning in the Bhiwandi logistics belt. Plumes visible from the Mumbai–Nashik highway. Fire services on scene; adjacent storage of packaging solvents raises secondary-blast risk.',
+    place: 'Bhiwandi, Maharashtra, India',
+    flag: 'IN',
+    coords: [72.91, 19.118],
+    severity: 'high',
     source: 'Hindustan Times',
     sourceUrl: 'https://www.hindustantimes.com/cities/mumbai-news',
     publishedAt: hoursAgo(0.15),
