@@ -175,26 +175,12 @@ button { cursor: pointer; }
   pointer-events: auto;
   z-index: 3;
 }
-.terrain-canvas .maplibregl-map {
+.terrain-canvas .maplibregl-map,
+.terrain-canvas .maplibregl-canvas {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
-}
-.terrain-canvas .maplibregl-canvas-container {
-  z-index: 0;
-}
-.terrain-canvas .maplibregl-canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-.terrain-canvas .maplibregl-marker {
-  z-index: 4 !important;
-}
-.terrain-canvas .maplibregl-marker:has(.is-selected),
-.terrain-canvas .maplibregl-marker:has(.pin.is-on) {
-  z-index: 6 !important;
 }
 .terrain-loading {
   position: absolute;

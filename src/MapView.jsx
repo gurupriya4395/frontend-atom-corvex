@@ -3,7 +3,6 @@ import { AttributionControl, Map, Marker, NavigationControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
 import { MUMBAI_FLOOD_ZONE } from './data'
-import './markers.css'
 
 /** Carto Voyager raster — reliable roads/labels on a light basemap. */
 const STREET_STYLE = {
@@ -50,7 +49,7 @@ export default function MapView({
 
   useEffect(() => {
     const el = wrapRef.current
-    if (!el) return
+    if (!el || !active) return
     let map
     let cancelled = false
 
@@ -107,7 +106,7 @@ export default function MapView({
       mapRef.current = null
       setReady(false)
     }
-  }, [tick])
+  }, [tick, active])
 
   useEffect(() => {
     const map = mapRef.current
@@ -117,14 +116,10 @@ export default function MapView({
     markersRef.current = []
 
     assets.forEach((asset) => {
-      const isSelected = selected?.type === 'asset' && selected.id === asset.id
-      const linkedToEvent =
-        selected?.type === 'event' &&
-        events.find((e) => e.id === selected.id)?.primary?.asset?.id === asset.id
       const el = document.createElement('div')
       const hot = highlightAssetId === asset.id && scene.warehouse
-      el.className = 'terrain-pin' + (hot || isSelected || linkedToEvent ? ' is-selected' : '')
-      el.innerHTML = assetMarkerHtml(asset, { selected: isSelected || linkedToEvent })
+      el.className = 'terrain-pin' + (hot ? ' is-hot' : '')
+      el.innerHTML = assetMarkerHtml(asset)
       el.style.cursor = 'pointer'
       el.addEventListener('click', (e) => {
         e.stopPropagation()
@@ -156,7 +151,7 @@ export default function MapView({
         features: events.map((e) => ({
           type: 'Feature',
           geometry: { type: 'Point', coordinates: e.coords },
-          properties: { impact: e.impact || 'none', kind: e.kind || 'default' },
+          properties: { impact: e.impact || 'none' },
         })),
       })
     }
@@ -255,40 +250,17 @@ export default function MapView({
     const target =
       selected.type === 'event' ? evs.find((e) => e.id === selected.id) : asts.find((a) => a.id === selected.id)
     if (!target) return
-
-    const pair =
-      selected.type === 'event' && target.linked
-        ? target.primary.asset
-        : selected.type === 'asset'
-          ? evs.find((e) => e.linked && e.primary.asset.id === target.id)
-          : null
-
-    if (selected.type === 'event' && pair) {
-      map.fitBounds([target.coords, pair.coords], {
-        padding: 96,
-        maxZoom: 12.2,
-        duration: 1100,
-      })
-      return
-    }
-    if (selected.type === 'asset' && pair) {
-      map.fitBounds([target.coords, pair.coords], {
-        padding: 96,
-        maxZoom: 12.2,
-        duration: 1100,
-      })
-      return
-    }
-
+    const cinematic = scene.flood || scene.distance || scene.warehouse
+    const zoom = cinematic ? (scene.distance ? 12.2 : 11.6) : selected.type === 'event' ? 11.4 : 10
     map.flyTo({
       center: target.coords,
-      zoom: selected.type === 'event' ? 11.6 : 10.5,
-      pitch: 0,
+      zoom,
+      pitch: cinematic ? 42 : 0,
       bearing: 0,
-      duration: 1100,
+      duration: 1200,
       essential: true,
     })
-  }, [selected?.id, selected?.type, ready])
+  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready])
 
   useEffect(() => {
     if (!active) return
@@ -340,28 +312,27 @@ function addDeskLayers(map) {
   if (!map.getSource('pulses')) {
     map.addSource('pulses', { type: 'geojson', data: emptyFc() })
     map.addLayer({
-      id: 'event-dots',
-      type: 'circle',
+      id: 'pulses-heat',
+      type: 'heatmap',
       source: 'pulses',
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 5, 10, 8, 14, 11],
-        'circle-color': [
-          'match',
-          ['get', 'kind'],
-          'fire',
-          '#f97316',
-          'flood',
-          '#16a34a',
-          'storm',
-          '#0ea5e9',
-          'security',
-          '#ec4899',
-          'protest',
-          '#8b5cf6',
-          '#6366f1',
+        'heatmap-weight': 0.65,
+        'heatmap-intensity': 0.75,
+        'heatmap-radius': 24,
+        'heatmap-opacity': 0.45,
+        'heatmap-color': [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0,
+          'rgba(0,0,0,0)',
+          0.25,
+          'rgba(99, 102, 241, 0.2)',
+          0.6,
+          'rgba(236, 72, 153, 0.35)',
+          0.9,
+          'rgba(249, 115, 22, 0.45)',
         ],
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff',
       },
     })
   }
@@ -429,24 +400,14 @@ function addDeskLayers(map) {
   if (!map.getSource('asset-link')) {
     map.addSource('asset-link', { type: 'geojson', data: emptyFc() })
     map.addLayer({
-      id: 'asset-link-case',
-      type: 'line',
-      source: 'asset-link',
-      paint: {
-        'line-color': '#ffffff',
-        'line-width': 7,
-        'line-opacity': 0.95,
-      },
-    })
-    map.addLayer({
       id: 'asset-link-line',
       type: 'line',
       source: 'asset-link',
       paint: {
-        'line-color': '#db2777',
-        'line-width': 3.5,
-        'line-opacity': 1,
-        'line-dasharray': [2, 1.6],
+        'line-color': ['case', ['==', ['get', 'high'], true], '#F97316', '#EC4899'],
+        'line-width': 2.6,
+        'line-opacity': 0.92,
+        'line-dasharray': [2.2, 1.4],
       },
     })
   }
