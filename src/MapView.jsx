@@ -35,6 +35,7 @@ export default function MapView({
   active = true,
 }) {
   const wrapRef = useRef(null)
+  const hudRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef([])
   const onSelectRef = useRef(onSelect)
@@ -132,13 +133,12 @@ export default function MapView({
       const isSelected = selected?.type === 'event' && selected.id === event.id
       const el = document.createElement('div')
       el.className = `terrain-ev${isSelected ? ' is-selected' : ''}`
-      el.innerHTML = eventMarkerHtml(event) + (isSelected ? eventBriefHtml(event) : '')
+      el.innerHTML = eventMarkerHtml(event)
       el.style.cursor = 'pointer'
       el.addEventListener('click', (e) => {
         e.stopPropagation()
         onSelectRef.current?.({ type: 'event', id: event.id })
       })
-      el.querySelector('a')?.addEventListener('click', (e) => e.stopPropagation())
       markersRef.current.push(new Marker({ element: el, anchor: 'bottom' }).setLngLat(event.coords).addTo(map))
     })
 
@@ -209,7 +209,7 @@ export default function MapView({
       })
     }
 
-    paintLinkOverlay(map, pairs, selected?.type === 'event' ? selected.id : null)
+    paintDeskHud(map, hudRef.current, events, selected)
   }, [
     events,
     assets,
@@ -228,8 +228,7 @@ export default function MapView({
     if (!map || !ready) return
     const onPaint = () => {
       const { events: evs, selected: sel } = dataRef.current
-      const pairs = evs.filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords))
-      paintLinkOverlay(map, pairs, sel?.type === 'event' ? sel.id : null)
+      paintDeskHud(map, hudRef.current, evs, sel)
     }
     map.on('move', onPaint)
     map.on('zoom', onPaint)
@@ -289,6 +288,7 @@ export default function MapView({
   return (
     <div className="map-el terrain-map">
       <div className="terrain-canvas" ref={wrapRef} />
+      <div className="desk-hud" ref={hudRef} />
       {!ready && !fail && <div className="terrain-loading">Loading streets…</div>}
       {fail && (
         <div className="terrain-fail">
@@ -432,41 +432,48 @@ function addDeskLayers(map) {
   }
 }
 
-function paintLinkOverlay(map, pairs, selectedId) {
-  if (!map) return
-  const host = map.getCanvasContainer()
-  let svg = host.querySelector('svg.asset-link-svg')
-  if (!svg) {
-    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('class', 'asset-link-svg')
-    host.appendChild(svg)
-  }
-  const w = host.clientWidth
-  const h = host.clientHeight
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
-  svg.setAttribute('width', String(w))
-  svg.setAttribute('height', String(h))
+function paintDeskHud(map, host, events, selected) {
+  if (!map || !host) return
+  const pairs = (events || []).filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords))
+  let focus = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
+  if (!focus?.linked) focus = pairs[0] || null
 
-  const body = (pairs || [])
-    .filter((e) => e.primary?.asset && Array.isArray(e.coords))
+  const w = host.clientWidth || map.getContainer().clientWidth
+  const h = host.clientHeight || map.getContainer().clientHeight
+  const lines = pairs
     .map((e) => {
-      const a = e.primary.asset
       const p1 = map.project(e.coords)
-      const p2 = map.project(a.coords)
-      const km = Number(e.primary.km).toFixed(1)
-      const mx = (p1.x + p2.x) / 2
-      const my = (p1.y + p2.y) / 2
-      const on = !selectedId || e.id === selectedId
+      const p2 = map.project(e.primary.asset.coords)
+      const on = focus && e.id === focus.id
       return `<g class="${on ? 'is-on' : ''}">
         <line class="link-halo" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" />
         <line class="link-dash" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" />
-        <foreignObject x="${mx - 46}" y="${my - 16}" width="92" height="32">
-          <div xmlns="http://www.w3.org/1999/xhtml" class="dist-chip">${km} km</div>
-        </foreignObject>
       </g>`
     })
     .join('')
-  svg.innerHTML = body
+
+  const chips = pairs
+    .map((e) => {
+      const p1 = map.project(e.coords)
+      const p2 = map.project(e.primary.asset.coords)
+      const mx = (p1.x + p2.x) / 2
+      const my = (p1.y + p2.y) / 2
+      if (mx < -40 || my < -20 || mx > w + 40 || my > h + 20) return ''
+      const on = focus && e.id === focus.id
+      return `<div class="dist-chip${on ? ' is-on' : ''}" style="left:${mx}px;top:${my}px">${Number(e.primary.km).toFixed(1)} km</div>`
+    })
+    .join('')
+
+  let card = ''
+  if (focus) {
+    const p = map.project(focus.coords)
+    const left = Math.max(12, Math.min(w - 308, p.x + 36))
+    const top = Math.max(12, Math.min(h - 220, p.y - 28))
+    card = `<div class="ev-brief-wrap" style="left:${left}px;top:${top}px">${eventBriefHtml(focus)}</div>`
+  }
+
+  host.innerHTML = `<svg class="desk-links" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${lines}</svg>${chips}${card}`
+  host.querySelectorAll('a').forEach((a) => a.addEventListener('click', (ev) => ev.stopPropagation()))
 }
 
 function emptyFc() {

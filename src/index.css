@@ -188,30 +188,46 @@ button { cursor: pointer; }
 .terrain-canvas .maplibregl-marker {
   z-index: 3;
 }
-.terrain-canvas .asset-link-svg {
+.desk-hud {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+}
+.desk-hud .desk-links {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
   overflow: visible;
 }
-.terrain-canvas .asset-link-svg .link-halo {
+.desk-hud .link-halo {
   fill: none;
   stroke: #ffffff;
-  stroke-width: 9;
+  stroke-width: 10;
   stroke-linecap: round;
 }
-.terrain-canvas .asset-link-svg .link-dash {
+.desk-hud .link-dash {
   fill: none;
   stroke: #0f172a;
-  stroke-width: 3.5;
-  stroke-dasharray: 11 8;
+  stroke-width: 3.8;
+  stroke-dasharray: 12 9;
   stroke-linecap: round;
 }
-.terrain-canvas .asset-link-svg g:not(.is-on) {
-  opacity: 0.4;
+.desk-hud g:not(.is-on) {
+  opacity: 0.35;
+}
+.desk-hud .dist-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+}
+.desk-hud .ev-brief-wrap {
+  position: absolute;
+  z-index: 7;
+  width: 288px;
+  pointer-events: auto;
 }
 .terrain-loading {
   position: absolute;
@@ -505,6 +521,13 @@ button { cursor: pointer; }
   background: transparent;
   padding: 0;
   pointer-events: auto;
+  overflow: visible;
+}
+.globe-pin.is-dist {
+  pointer-events: none;
+}
+.globe-pin.is-selected {
+  z-index: 40;
 }
 
 .map-wrap {
@@ -518,7 +541,7 @@ button { cursor: pointer; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
 }
 .globe-labels .globe-pin { pointer-events: auto; }
 .globe-msg {

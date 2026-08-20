@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import { eventMarkerHtml, assetMarkerHtml } from './markers'
+import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
 
 const R = 100
 
@@ -28,8 +28,8 @@ export default function GlobeMap({
   const worldRef = useRef(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
-  const dataRef = useRef({ events, assets, showRadiusFor, pulseEventId, highlightAssetId })
-  dataRef.current = { events, assets, showRadiusFor, pulseEventId, highlightAssetId }
+  const dataRef = useRef({ events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected })
+  dataRef.current = { events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected }
 
   useEffect(() => {
     const el = hostRef.current
@@ -77,7 +77,7 @@ export default function GlobeMap({
 
   useEffect(() => {
     worldRef.current?.setData(dataRef.current)
-  }, [events, assets, showRadiusFor, pulseEventId, highlightAssetId])
+  }, [events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected])
 
   useEffect(() => {
     const world = worldRef.current
@@ -304,7 +304,7 @@ function createWorld(el, getOnSelect) {
   resize()
   tick()
 
-  const setData = ({ events, assets, showRadiusFor, pulseEventId, highlightAssetId }) => {
+  const setData = ({ events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected }) => {
     while (overlay.children.length) {
       const child = overlay.children[0]
       overlay.remove(child)
@@ -331,13 +331,14 @@ function createWorld(el, getOnSelect) {
       overlay.add(fenceRing(fence.coords[1], fence.coords[0], fence.radiusKm, 0xc4a574))
     }
     for (const e of events) {
+      const isSelected = selected?.type === 'event' && selected.id === e.id
       overlay.add(
         htmlPin(
           e.coords[1],
           e.coords[0],
-          eventMarkerHtml(e),
+          eventMarkerHtml(e) + (isSelected ? eventBriefHtml(e) : ''),
           () => getOnSelect()?.({ type: 'event', id: e.id }),
-          pulseEventId === e.id ? 'is-pulse' : '',
+          `${pulseEventId === e.id ? 'is-pulse' : ''}${isSelected ? ' is-selected' : ''}`.trim(),
         ),
       )
       overlay.add(surfaceDot(e.coords[1], e.coords[0], colorFor(e)))
@@ -360,7 +361,16 @@ function createWorld(el, getOnSelect) {
             e.coords[0],
             e.primary.asset.coords[1],
             e.primary.asset.coords[0],
-            e.impact === 'high' ? 0xff4d12 : 0xec4899,
+            e.impact === 'high' ? 0xff4d12 : 0x0f172a,
+          ),
+        )
+        overlay.add(
+          htmlPin(
+            (e.coords[1] + e.primary.asset.coords[1]) / 2,
+            (e.coords[0] + e.primary.asset.coords[0]) / 2,
+            `<span class="dist-chip">${Number(e.primary.km).toFixed(1)} km</span>`,
+            () => {},
+            'is-dist',
           ),
         )
       }

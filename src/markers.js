@@ -12,16 +12,20 @@ export function eventBriefHtml(event) {
   const body = event.summary || event.why || ''
   const src = event.source && !/datasurfr|atom-corvex/i.test(event.source) ? event.source : 'Reuters'
   const href = eventSourceHref(event)
-  const when = event.eventAt || event.publishedAt
-  const date = when
-    ? new Date(when).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-    : ''
+  const sev = event.severity || 'medium'
   const asset = event.primary?.asset?.name
-  return `<div class="ev-brief">
+  const km = event.primary?.km
+  const dist =
+    km != null && asset
+      ? `${Number(km).toFixed(1)} km from ${asset}`
+      : 'No registered asset in radius'
+  return `<div class="ev-brief sev-${escapeHtml(sev)}">
+    <div class="ev-brief-meta">
+      <span class="ev-sev">${escapeHtml(sev)}</span>
+      <span class="ev-dist">${escapeHtml(dist)}</span>
+    </div>
     <h4>${escapeHtml(event.title)}</h4>
     <p>${escapeHtml(body)}</p>
-    ${asset ? `<p class="ev-brief-asset">Asset affected · ${escapeHtml(asset)}</p>` : ''}
-    ${date ? `<p class="ev-brief-date">${escapeHtml(date)}</p>` : ''}
     <a class="ev-source" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${escapeHtml(src)}</a>
   </div>`
 }
