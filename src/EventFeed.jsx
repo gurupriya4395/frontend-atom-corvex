@@ -13,21 +13,33 @@ export default function EventFeed({
   counts,
   freshId,
   timeMode,
+  siteName,
   emptyHint,
+  horizon = 'all',
+  onHorizon,
 }) {
-  const modeLabel = timeMode === 'forecast' ? 'Forecast' : timeMode === 'history' ? 'History' : 'Live'
-  const n = timeMode === 'forecast' ? counts.forecast : timeMode === 'history' ? events.length : counts.live
-
   return (
     <aside className="feed">
       <div className="feed-head">
-        <div className="feed-title">
-          <h2>Proximity</h2>
-          <em>{n ?? events.length}</em>
+        <div className="feed-tabs">
+          {[
+            ['live', 'Live', counts.live],
+            ['forecast', 'Forecast', counts.forecast],
+          ].map(([id, label, n]) => (
+            <button
+              key={id}
+              type="button"
+              className={horizon === 'all' || horizon === id ? 'active' : ''}
+              onClick={() => onHorizon?.(horizon === id ? 'all' : id)}
+            >
+              {label}
+              <em>{n ?? 0}</em>
+            </button>
+          ))}
         </div>
         <div className="feed-meta">
           <span className="live-dot" />
-          <span>{modeLabel} events</span>
+          <span>{siteName ? `Site · ${siteName}` : `${timeMode} desk`}</span>
           <span>{now.toLocaleTimeString('en-GB', { hour12: false })}</span>
         </div>
       </div>
