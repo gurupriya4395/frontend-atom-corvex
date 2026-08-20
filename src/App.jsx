@@ -150,13 +150,21 @@ export default function App() {
     if (opts.map) setMapMode('map')
   }
 
-  const pickAsset = (id) => {
+  const pickAsset = (id, opts = {}) => {
     setSelectedAssetId(id)
     setSelectedId(null)
     setSiteFilterId(id)
     setPage('operations')
     setAffectsOnly(false)
     setFeedMode('geographical')
+    if (opts.map) setMapMode('map')
+  }
+
+  const clearSelection = () => {
+    setSelectedId(null)
+    setSelectedAssetId(null)
+    setSiteFilterId(null)
+    setScene((s) => ({ ...s, pulse: false, warehouse: false }))
   }
 
   const resetScene = () =>
@@ -344,8 +352,12 @@ export default function App() {
               assets={ASSETS}
               selected={selected}
               onSelect={(sel) => {
-                if (sel.type === 'event') pickEvent(sel.id, { map: mapMode === 'map' })
-                if (sel.type === 'asset') pickAsset(sel.id)
+                if (!sel) {
+                  clearSelection()
+                  return
+                }
+                if (sel.type === 'event') pickEvent(sel.id, { map: true })
+                if (sel.type === 'asset') pickAsset(sel.id, { map: true })
               }}
               showRadiusFor={showRadius}
               timeMode={timeMode}
@@ -394,7 +406,7 @@ export default function App() {
               if (m === 'geographical') setAffectsOnly(false)
             }}
             selectedId={selectedId}
-            onSelect={(id) => pickEvent(id, { map: mapMode === 'map' })}
+            onSelect={(id) => pickEvent(id, { map: true })}
             now={now}
             counts={counts}
             freshId={freshId}

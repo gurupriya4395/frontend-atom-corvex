@@ -5,7 +5,6 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 import { eventMarkerHtml, assetMarkerHtml } from './markers'
 
 const R = 100
-const GLOBE_HOME = { lat: 20, lng: 78, alt: 3.1 }
 
 export default function GlobeMap({
   events,
@@ -82,9 +81,9 @@ export default function GlobeMap({
 
   useEffect(() => {
     const world = worldRef.current
-    if (!world) return
+    if (!world || mode !== 'globe') return
     world.setAutoRotate(false)
-    if (pulseEventId && mode === 'globe' && !selected) {
+    if (pulseEventId && !selected) {
       const ev = events.find((e) => e.id === pulseEventId)
       if (ev) world.flyTo(ev.coords[1], ev.coords[0], false)
       return
@@ -109,6 +108,7 @@ export default function GlobeMap({
   }, [])
 
   const zoomOutGlobe = () => {
+    onSelectRef.current?.(null)
     worldRef.current?.zoomOut()
   }
 
@@ -187,7 +187,7 @@ export default function GlobeMap({
               <h4>World</h4>
               <div className="lg">Icon = event type</div>
               <div className="lg">Ring = linked / high impact</div>
-              <div className="lg">Arc = event → site</div>
+              <div className="lg">Dotted arc = event → site</div>
               <div className="lg">Dashed ring = fence</div>
               <div className="lg">Drag to look around</div>
             </div>
@@ -218,9 +218,12 @@ function createWorld(el, getOnSelect) {
   controls.enableDamping = true
   controls.dampingFactor = 0.06
   controls.autoRotate = false
-  controls.minDistance = 130
-  controls.maxDistance = 520
+  controls.minDistance = 150
+  controls.maxDistance = 780
   controls.enablePan = false
+  controls.enableRotate = true
+  controls.enableZoom = true
+  controls.target.set(0, 0, 0)
 
   scene.add(new THREE.AmbientLight(0xffffff, 1.15))
   const sun = new THREE.DirectionalLight(0xfff8f0, 1.45)
@@ -352,12 +355,12 @@ function createWorld(el, getOnSelect) {
       }
       if (e.linked) {
         overlay.add(
-          arc(
+          dashedArc(
             e.coords[1],
             e.coords[0],
             e.primary.asset.coords[1],
             e.primary.asset.coords[0],
-            e.impact === 'high' ? 0xff4d12 : 0x5c7d86,
+            e.impact === 'high' ? 0xff4d12 : 0xec4899,
           ),
         )
       }
@@ -372,8 +375,18 @@ function createWorld(el, getOnSelect) {
     return { lat, lng, alt }
   }
 
-  const animateCamera = (dest, duration = 1200) => {
+  let flyRaf = 0
+  const cancelFly = () => {
+    if (flyRaf) cancelAnimationFrame(flyRaf)
+    flyRaf = 0
+    controls.enabled = true
+  }
+
+  const animateCamera = (dest, duration = 1200, { lockControls = true } = {}) => {
+    cancelFly()
     controls.autoRotate = false
+    if (lockControls) controls.enabled = false
+    else controls.enabled = true
     const start = camera.position.clone()
     const t0 = performance.now()
     const step = () => {
@@ -381,17 +394,31 @@ function createWorld(el, getOnSelect) {
       const k = 1 - (1 - t) ** 3
       camera.position.lerpVectors(start, dest, k)
       camera.lookAt(0, 0, 0)
-      if (t < 1) requestAnimationFrame(step)
+      controls.target.set(0, 0, 0)
+      if (t < 1) {
+        flyRaf = requestAnimationFrame(step)
+      } else {
+        flyRaf = 0
+        controls.enabled = true
+        controls.update()
+      }
     }
-    step()
+    flyRaf = requestAnimationFrame(step)
   }
 
+  renderer.domElement.addEventListener('pointerdown', () => {
+    if (flyRaf) cancelFly()
+  })
+
   const flyTo = (lat, lng, close = false) => {
-    animateCamera(latLngToVec3(lat, lng, close ? 0.38 : 1.35), 1400)
+    animateCamera(latLngToVec3(lat, lng, close ? 0.55 : 1.55), 1400)
   }
 
   const zoomOut = () => {
-    animateCamera(latLngToVec3(GLOBE_HOME.lat, GLOBE_HOME.lng, GLOBE_HOME.alt))
+    cancelFly()
+    controls.enabled = true
+    controls.target.set(0, 0, 0)
+    animateCamera(new THREE.Vector3(0, 70, 460), 900, { lockControls: false })
   }
 
   return {
@@ -407,6 +434,7 @@ function createWorld(el, getOnSelect) {
       paused = on
     },
     dispose: () => {
+      cancelFly()
       cancelAnimationFrame(raf)
       controls.dispose()
       renderer.dispose()
@@ -468,7 +496,7 @@ function surfaceHalo(lat, lng, size, color, opacity = 0.35) {
   return mesh
 }
 
-function arc(lat0, lng0, lat1, lng1, color) {
+function dashedArc(lat0, lng0, lat1, lng1, color) {
   const v0 = latLngToVec3(lat0, lng0, 0.01)
   const v1 = latLngToVec3(lat1, lng1, 0.01)
   const mid = v0.clone().add(v1).multiplyScalar(0.5)
@@ -476,7 +504,18 @@ function arc(lat0, lng0, lat1, lng1, color) {
   mid.normalize().multiplyScalar(R + lift)
   const curve = new THREE.QuadraticBezierCurve3(v0, mid, v1)
   const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(56))
-  return new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 }))
+  const line = new THREE.Line(
+    geo,
+    new THREE.LineDashedMaterial({
+      color,
+      dashSize: 1.35,
+      gapSize: 0.85,
+      transparent: true,
+      opacity: 0.95,
+    }),
+  )
+  line.computeLineDistances()
+  return line
 }
 
 function fenceRing(lat, lng, radiusKm, color) {

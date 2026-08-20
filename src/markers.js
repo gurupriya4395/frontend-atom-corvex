@@ -3,11 +3,33 @@ export function eventMarkerHtml(event) {
   return `<span class="haz haz-${event.kind} impact-${impact}" title="${escapeHtml(event.title)}">${inner(event.kind)}</span>`
 }
 
+export function eventSourceHref(event) {
+  if (event.sourceUrl) return event.sourceUrl
+  const q = encodeURIComponent(`${event.place || ''} ${event.title}`)
+  return `https://news.google.com/search?q=${q}&hl=en`
+}
+
+export function eventBriefHtml(event) {
+  const sev = (event.severity || 'low').toUpperCase()
+  const impact = (event.impact || 'none').toUpperCase()
+  const km = event.linked ? `${event.primary.km.toFixed(1)} km to ${event.primary.asset.name}` : 'Not linked to a site'
+  const body = event.summary || event.why || ''
+  const src = event.source || 'ATOM-CORVEX'
+  const href = eventSourceHref(event)
+  return `<div class="ev-brief sev-${event.severity || 'low'}">
+    <div class="ev-brief-meta">
+      <span>${escapeHtml(sev)}</span>
+      <span>${escapeHtml(impact)} impact</span>
+    </div>
+    <h4>${escapeHtml(event.title)}</h4>
+    <p class="ev-brief-dist">${escapeHtml(km)}</p>
+    <p>${escapeHtml(body)}</p>
+    <a class="ev-source" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">Source · ${escapeHtml(src)}</a>
+  </div>`
+}
+
 export function eventCalloutHtml(event) {
-  const sev = event.severity || 'low'
-  const km = event.linked ? `${event.primary.km.toFixed(1)} km` : 'Unlinked'
-  const site = event.linked ? event.primary.asset.name : event.place.split(',')[0]
-  return `<div class="ev-callout sev-${sev}"><em>${escapeHtml(sev)}</em><b>${escapeHtml(km)}</b><span>${escapeHtml(site)}</span></div>`
+  return eventBriefHtml(event)
 }
 
 export function assetMarkerHtml(asset) {

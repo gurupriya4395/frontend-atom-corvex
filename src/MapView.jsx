@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AttributionControl, Map, Marker, NavigationControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { eventMarkerHtml, eventCalloutHtml, assetMarkerHtml } from './markers'
-import { haversineKm } from './scoring'
+import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
 import { MUMBAI_FLOOD_ZONE } from './data'
 
 /** Carto Voyager raster — reliable roads/labels on a light basemap. */
@@ -133,12 +132,13 @@ export default function MapView({
       const isSelected = selected?.type === 'event' && selected.id === event.id
       const el = document.createElement('div')
       el.className = `terrain-ev${isSelected ? ' is-selected' : ''}`
-      el.innerHTML = eventMarkerHtml(event) + (isSelected ? eventCalloutHtml(event) : '')
+      el.innerHTML = eventMarkerHtml(event) + (isSelected ? eventBriefHtml(event) : '')
       el.style.cursor = 'pointer'
       el.addEventListener('click', (e) => {
         e.stopPropagation()
         onSelectRef.current?.({ type: 'event', id: event.id })
       })
+      el.querySelector('a')?.addEventListener('click', (e) => e.stopPropagation())
       markersRef.current.push(new Marker({ element: el, anchor: 'bottom' }).setLngLat(event.coords).addTo(map))
     })
 
@@ -209,38 +209,27 @@ export default function MapView({
     const flood = map.getSource('flood')
     if (flood) flood.setData({ type: 'FeatureCollection', features: scene.flood ? [MUMBAI_FLOOD_ZONE] : [] })
 
-    const focusEvent =
-      selected?.type === 'event' ? events.find((e) => e.id === selected.id) : events.find((e) => e.linked)
-    const linkAsset = focusEvent?.linked
-      ? focusEvent.primary.asset
-      : highlightAssetId
-        ? assets.find((a) => a.id === highlightAssetId)
-        : null
-
+    const linkedHits = events.filter((e) => e.linked && e.primary?.asset)
     const link = map.getSource('asset-link')
     if (link) {
       link.setData({
         type: 'FeatureCollection',
-        features:
-          focusEvent && linkAsset
-            ? [
-                {
-                  type: 'Feature',
-                  geometry: { type: 'LineString', coordinates: [focusEvent.coords, linkAsset.coords] },
-                },
-              ]
-            : [],
+        features: linkedHits.map((e) => ({
+          type: 'Feature',
+          properties: { id: e.id, high: e.impact === 'high' },
+          geometry: { type: 'LineString', coordinates: [e.coords, e.primary.asset.coords] },
+        })),
       })
     }
 
-    if (focusEvent && linkAsset) {
-      const km = focusEvent.linked ? focusEvent.primary.km : haversineKm(focusEvent.coords, linkAsset.coords)
-      const mid = [(focusEvent.coords[0] + linkAsset.coords[0]) / 2, (focusEvent.coords[1] + linkAsset.coords[1]) / 2]
+    linkedHits.forEach((e) => {
+      const km = e.primary.km
+      const mid = [(e.coords[0] + e.primary.asset.coords[0]) / 2, (e.coords[1] + e.primary.asset.coords[1]) / 2]
       const chip = document.createElement('div')
-      chip.className = `dist-chip sev-${focusEvent.severity || 'low'}`
-      chip.innerHTML = `<em>Event → asset</em><b>${km.toFixed(1)} km</b><span>${escapeHtml(linkAsset.name)}</span>`
+      chip.className = `dist-chip sev-${e.severity || 'low'}`
+      chip.innerHTML = `<em>Event → asset</em><b>${km.toFixed(1)} km</b><span>${escapeHtml(e.primary.asset.name)}</span>`
       markersRef.current.push(new Marker({ element: chip, anchor: 'center' }).setLngLat(mid).addTo(map))
-    }
+    })
   }, [
     events,
     assets,
@@ -279,10 +268,6 @@ export default function MapView({
     return () => clearTimeout(t)
   }, [active])
 
-  const selectedEvent = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
-  const selectedAsset = selected?.type === 'asset' ? assets.find((a) => a.id === selected.id) : null
-  const cardEvent = selectedEvent || events.find((e) => e.linked) || null
-
   const zoomOut = () => {
     mapRef.current?.flyTo({
       center: [78.0, 21.5],
@@ -313,28 +298,6 @@ export default function MapView({
             Zoom out
           </button>
         </div>
-        {cardEvent && <ParamCard event={cardEvent} pinned={Boolean(selectedEvent)} />}
-        {!cardEvent && selectedAsset && (
-          <article className="param-card">
-            <header>
-              <span className="param-icon green" />
-              <div>
-                <em>Registered site</em>
-                <h3>{selectedAsset.name}</h3>
-              </div>
-            </header>
-            <div className="param-tiles">
-              <div className="pt indigo">
-                <b>{selectedAsset.radiusKm} km</b>
-                <span>Fence</span>
-              </div>
-              <div className="pt purple">
-                <b>{selectedAsset.city}</b>
-                <span>City</span>
-              </div>
-            </div>
-          </article>
-        )}
         <div className="terrain-key" aria-label="Severity key">
           <span className="k high">High</span>
           <span className="k medium">Medium</span>
@@ -342,50 +305,6 @@ export default function MapView({
         </div>
       </div>
     </div>
-  )
-}
-
-function ParamCard({ event, pinned }) {
-  const km = event.linked ? event.primary.km.toFixed(1) : '—'
-  const site = event.linked ? event.primary.asset.name : 'Unlinked'
-  const fence = event.linked
-    ? event.primary.inside
-      ? `Inside ${event.primary.asset.radiusKm} km`
-      : `Outside ${event.primary.asset.radiusKm} km`
-    : 'No fence'
-  const impact = (event.impact || 'none').toUpperCase()
-  return (
-    <article className={`param-card sev-${event.severity}${pinned ? ' is-pinned' : ''}`}>
-      <header>
-        <span className={`param-icon ${event.severity}`} />
-        <div>
-          <em>{pinned ? 'On map' : 'Nearest hit'}</em>
-          <h3>{event.title}</h3>
-        </div>
-      </header>
-      <div className="param-tiles">
-        <div className={`pt ${event.severity === 'high' ? 'orange' : event.severity === 'medium' ? 'pink' : 'green'}`}>
-          <b>{event.severity.toUpperCase()}</b>
-          <span>Severity</span>
-        </div>
-        <div className="pt indigo">
-          <b>{km === '—' ? '—' : `${km} km`}</b>
-          <span>Distance</span>
-        </div>
-        <div className="pt purple">
-          <b>{impact}</b>
-          <span>Impact</span>
-        </div>
-        <div className="pt green">
-          <b>{fence}</b>
-          <span>Fence</span>
-        </div>
-      </div>
-      <footer>
-        <span>{site}</span>
-        <span>{event.kind}</span>
-      </footer>
-    </article>
   )
 }
 
@@ -484,7 +403,12 @@ function addDeskLayers(map) {
       id: 'asset-link-line',
       type: 'line',
       source: 'asset-link',
-      paint: { 'line-color': '#EC4899', 'line-width': 4, 'line-opacity': 0.9 },
+      paint: {
+        'line-color': ['case', ['==', ['get', 'high'], true], '#F97316', '#EC4899'],
+        'line-width': 2.6,
+        'line-opacity': 0.92,
+        'line-dasharray': [2.2, 1.4],
+      },
     })
   }
 }
