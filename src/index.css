@@ -182,6 +182,37 @@ button { cursor: pointer; }
   width: 100% !important;
   height: 100% !important;
 }
+.terrain-canvas .maplibregl-canvas {
+  z-index: 0;
+}
+.terrain-canvas .maplibregl-marker {
+  z-index: 3;
+}
+.terrain-canvas .asset-link-svg {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.terrain-canvas .asset-link-svg .link-halo {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+.terrain-canvas .asset-link-svg .link-dash {
+  fill: none;
+  stroke: #0f172a;
+  stroke-width: 3.5;
+  stroke-dasharray: 11 8;
+  stroke-linecap: round;
+}
+.terrain-canvas .asset-link-svg g:not(.is-on) {
+  opacity: 0.4;
+}
 .terrain-loading {
   position: absolute;
   inset: 0;
@@ -1481,15 +1512,19 @@ td { border-bottom: 1px solid #1c2418; padding: 10px 8px; }
   box-shadow: 0 0 0 4px rgba(212, 86, 42, 0.35);
 }
 .dist-chip {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 11px;
   background: #ffffff;
-  border: 1px solid #111827;
+  border: 1.5px solid #111827;
   border-radius: 999px;
   color: #111827;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
   pointer-events: none;
   white-space: nowrap;
 }

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import SideRail from './SideRail'
-import { ASSETS, DEMO, EVENTS, INCOMING } from './data'
+import { DEMO, INDIA_ASSETS, INDIA_EVENTS, INCOMING, isIndiaEvent } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import './index.css'
@@ -10,8 +10,8 @@ import './markers.css'
 const GlobeMap = lazy(() => import('./GlobeMap'))
 
 export default function App() {
-  const [raw, setRaw] = useState(EVENTS)
-  const enriched = useMemo(() => enrich(raw, ASSETS), [raw])
+  const [raw, setRaw] = useState(INDIA_EVENTS)
+  const enriched = useMemo(() => enrich(raw, INDIA_ASSETS), [raw])
   const [page, setPage] = useState('operations')
   const [timeMode, setTimeMode] = useState('live')
   const [horizon, setHorizon] = useState('all')
@@ -74,6 +74,7 @@ export default function App() {
         setLog((lines) => [`Update · ${item.threadId}`, ...lines].slice(0, 6))
         return
       }
+      if (!isIndiaEvent(item)) return
       const next = { ...item, publishedAt: at, eventAt: at }
       setRaw((prev) => [next, ...prev.filter((e) => e.id !== next.id)])
       setFreshId(next.id)
@@ -137,7 +138,7 @@ export default function App() {
     : selectedEvent?.linked
       ? selectedEvent.primary.asset.id
       : selectedAssetId
-  const siteName = siteFilterId ? ASSETS.find((a) => a.id === siteFilterId)?.name : null
+  const siteName = siteFilterId ? INDIA_ASSETS.find((a) => a.id === siteFilterId)?.name : null
 
   const emptyHint = (() => {
     if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
@@ -293,10 +294,10 @@ export default function App() {
               <h2>Registered sites</h2>
               <p className="stamp">Exposure on the book — click a site to throw its fence and filter the desk.</p>
             </div>
-            <span className="stamp">{ASSETS.length} assets</span>
+            <span className="stamp">{INDIA_ASSETS.length} assets · India</span>
           </header>
           <div className="site-grid">
-            {ASSETS.map((a) => {
+            {INDIA_ASSETS.map((a) => {
               const hits = enriched.filter((e) => e.linked && e.primary.asset.id === a.id)
               const hot = hits.find((e) => e.alert)
               return (
@@ -355,7 +356,7 @@ export default function App() {
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
             <GlobeMap
               events={filtered}
-              assets={ASSETS}
+              assets={INDIA_ASSETS}
               selected={selected}
               onSelect={(sel) => {
                 if (!sel) {
@@ -394,7 +395,7 @@ export default function App() {
               })
             }}
             allEvents={enriched}
-            assets={ASSETS}
+            assets={INDIA_ASSETS}
             filteredCount={filtered.length}
             latencyMs={latencyMs}
             log={log}

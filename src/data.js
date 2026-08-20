@@ -541,3 +541,8 @@ export const DEMO = {
   eventId: 'ev-flood-mum',
   assetId: 'ast-mum-wh',
 }
+
+export const isIndiaEvent = (e) => e?.flag === 'IN'
+export const isIndiaAsset = (a) => a?.country === 'India'
+export const INDIA_ASSETS = ASSETS.filter(isIndiaAsset)
+export const INDIA_EVENTS = EVENTS.filter(isIndiaEvent)

@@ -39,8 +39,8 @@ export default function MapView({
   const markersRef = useRef([])
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
-  const dataRef = useRef({ events, assets })
-  dataRef.current = { events, assets }
+  const dataRef = useRef({ events, assets, selected })
+  dataRef.current = { events, assets, selected }
   const [fail, setFail] = useState(null)
   const [ready, setReady] = useState(false)
   const [tick, setTick] = useState(0)
@@ -60,8 +60,8 @@ export default function MapView({
         map = new Map({
           container: el,
           style: STREET_STYLE,
-          center: [78.0, 21.5],
-          zoom: 4.2,
+          center: [72.8777, 19.076],
+          zoom: 12,
           pitch: 0,
           bearing: 0,
           maxPitch: 60,
@@ -197,32 +197,19 @@ export default function MapView({
     const flood = map.getSource('flood')
     if (flood) flood.setData({ type: 'FeatureCollection', features: scene.flood ? [MUMBAI_FLOOD_ZONE] : [] })
 
-    const focus = selected?.type === 'event' ? events.find((e) => e.id === selected.id) : null
-    const pair = focus?.primary?.asset
+    const pairs = events.filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords))
     const link = map.getSource('asset-link')
     if (link) {
       link.setData({
         type: 'FeatureCollection',
-        features:
-          focus && pair
-            ? [
-                {
-                  type: 'Feature',
-                  geometry: { type: 'LineString', coordinates: [focus.coords, pair.coords] },
-                },
-              ]
-            : [],
+        features: pairs.map((e) => ({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [e.coords, e.primary.asset.coords] },
+        })),
       })
     }
 
-    if (focus && pair) {
-      const km = focus.primary.km
-      const mid = [(focus.coords[0] + pair.coords[0]) / 2, (focus.coords[1] + pair.coords[1]) / 2]
-      const chip = document.createElement('div')
-      chip.className = 'dist-chip'
-      chip.textContent = `${km.toFixed(1)} km`
-      markersRef.current.push(new Marker({ element: chip, anchor: 'center' }).setLngLat(mid).addTo(map))
-    }
+    paintLinkOverlay(map, pairs, selected?.type === 'event' ? selected.id : null)
   }, [
     events,
     assets,
@@ -238,6 +225,26 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current
+    if (!map || !ready) return
+    const onPaint = () => {
+      const { events: evs, selected: sel } = dataRef.current
+      const pairs = evs.filter((e) => e.linked && e.primary?.asset && Array.isArray(e.coords))
+      paintLinkOverlay(map, pairs, sel?.type === 'event' ? sel.id : null)
+    }
+    map.on('move', onPaint)
+    map.on('zoom', onPaint)
+    map.on('pitch', onPaint)
+    map.on('rotate', onPaint)
+    return () => {
+      map.off('move', onPaint)
+      map.off('zoom', onPaint)
+      map.off('pitch', onPaint)
+      map.off('rotate', onPaint)
+    }
+  }, [ready])
+
+  useEffect(() => {
+    const map = mapRef.current
     if (!map || !ready || !selected?.id) return
     const { events: evs, assets: asts } = dataRef.current
     const target =
@@ -245,7 +252,11 @@ export default function MapView({
     if (!target) return
     const asset = selected.type === 'event' ? target.primary?.asset : null
     if (asset) {
-      map.fitBounds([target.coords, asset.coords], { padding: 100, maxZoom: 13, duration: 1100 })
+      map.fitBounds([target.coords, asset.coords], {
+        padding: { top: 120, bottom: 140, left: 80, right: 320 },
+        maxZoom: 14,
+        duration: 1100,
+      })
       return
     }
     map.flyTo({
@@ -266,8 +277,8 @@ export default function MapView({
 
   const zoomOut = () => {
     mapRef.current?.flyTo({
-      center: [78.0, 21.5],
-      zoom: 4.2,
+      center: [72.8777, 19.076],
+      zoom: 12,
       pitch: 0,
       bearing: 0,
       duration: 1200,
@@ -315,7 +326,7 @@ function addDeskLayers(map) {
         'heatmap-weight': 0.65,
         'heatmap-intensity': 0.75,
         'heatmap-radius': 24,
-        'heatmap-opacity': 0.45,
+        'heatmap-opacity': 0.22,
         'heatmap-color': [
           'interpolate',
           ['linear'],
@@ -396,17 +407,66 @@ function addDeskLayers(map) {
   if (!map.getSource('asset-link')) {
     map.addSource('asset-link', { type: 'geojson', data: emptyFc() })
     map.addLayer({
+      id: 'asset-link-halo',
+      type: 'line',
+      source: 'asset-link',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 8,
+        'line-opacity': 0.95,
+        'line-cap': 'round',
+      },
+    })
+    map.addLayer({
       id: 'asset-link-line',
       type: 'line',
       source: 'asset-link',
       paint: {
         'line-color': '#0f172a',
-        'line-width': 2.4,
-        'line-opacity': 0.95,
-        'line-dasharray': [2, 1.4],
+        'line-width': 3.6,
+        'line-opacity': 1,
+        'line-dasharray': [2.2, 1.6],
+        'line-cap': 'round',
       },
     })
   }
+}
+
+function paintLinkOverlay(map, pairs, selectedId) {
+  if (!map) return
+  const host = map.getCanvasContainer()
+  let svg = host.querySelector('svg.asset-link-svg')
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('class', 'asset-link-svg')
+    host.appendChild(svg)
+  }
+  const w = host.clientWidth
+  const h = host.clientHeight
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+  svg.setAttribute('width', String(w))
+  svg.setAttribute('height', String(h))
+
+  const body = (pairs || [])
+    .filter((e) => e.primary?.asset && Array.isArray(e.coords))
+    .map((e) => {
+      const a = e.primary.asset
+      const p1 = map.project(e.coords)
+      const p2 = map.project(a.coords)
+      const km = Number(e.primary.km).toFixed(1)
+      const mx = (p1.x + p2.x) / 2
+      const my = (p1.y + p2.y) / 2
+      const on = !selectedId || e.id === selectedId
+      return `<g class="${on ? 'is-on' : ''}">
+        <line class="link-halo" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" />
+        <line class="link-dash" x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" />
+        <foreignObject x="${mx - 46}" y="${my - 16}" width="92" height="32">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="dist-chip">${km} km</div>
+        </foreignObject>
+      </g>`
+    })
+    .join('')
+  svg.innerHTML = body
 }
 
 function emptyFc() {
