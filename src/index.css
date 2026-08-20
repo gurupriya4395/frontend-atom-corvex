@@ -586,7 +586,7 @@ button { cursor: pointer; }
   color: var(--text);
 }
 .rail { left: 14px; }
-.feed { right: 14px; width: 318px; }
+.feed { left: 14px; right: auto; width: 318px; }
 .detail {
   position: absolute;
   right: 346px;
@@ -931,6 +931,26 @@ button { cursor: pointer; }
   padding: 12px 14px 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
+}
+.feed-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.feed-title h2 {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.feed-title em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
 }
 .ticker span {
   font-family: 'Inter', system-ui, sans-serif;

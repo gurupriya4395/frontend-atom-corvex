@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
-import SideRail from './SideRail'
-import { ASSETS, DEMO, EVENTS, INCOMING } from './data'
+import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import './index.css'
@@ -14,7 +13,6 @@ export default function App() {
   const enriched = useMemo(() => enrich(raw, ASSETS), [raw])
   const [page, setPage] = useState('operations')
   const [timeMode, setTimeMode] = useState('live')
-  const [horizon, setHorizon] = useState('all')
   const [feedMode, setFeedMode] = useState('proximity')
   const [q, setQ] = useState('')
   const [affectsOnly, setAffectsOnly] = useState(true)
@@ -96,32 +94,28 @@ export default function App() {
     const isForecast = Boolean(e.forecast) || e.eventAt > Date.now()
     if (timeMode === 'history') return e.publishedAt < Date.now() - 4 * 3600 * 1000 && !isForecast
     if (timeMode === 'forecast') return isForecast
-    return true
+    return !isForecast
   })
 
   const needle = q.trim().toLowerCase()
   const catsOn = Object.values(cats).some(Boolean)
   const sevsOn = Object.values(sevs).some(Boolean)
 
-  const prox = timed.filter((e) => {
+  const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
+  const listed = timed.filter((e) => {
     if (!cats[e.category] || !sevs[e.severity]) return false
     if (needle && !searchHay(e).includes(needle)) return false
     if (siteFilterId) return e.linked && e.primary.asset.id === siteFilterId
-    return e.linked
-  })
-
-  const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
-  const filtered = prox.filter((e) => {
-    if (horizon === 'live') return !isForecastEvent(e)
-    if (horizon === 'forecast') return isForecastEvent(e)
     return true
   })
+  const globeEvents = listed.filter((e) => e.flag === 'IN')
+  const filtered = listed
 
   const counts = {
     geo: timed.filter((e) => cats[e.category] && sevs[e.severity]).length,
-    prox: prox.length,
-    live: prox.filter((e) => !isForecastEvent(e)).length,
-    forecast: prox.filter((e) => isForecastEvent(e)).length,
+    prox: listed.length,
+    live: enriched.filter((e) => !isForecastEvent(e) && cats[e.category] && sevs[e.severity]).length,
+    forecast: enriched.filter((e) => isForecastEvent(e) && cats[e.category] && sevs[e.severity]).length,
     watch: timed.filter((e) => (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity]).length,
   }
 
@@ -143,10 +137,9 @@ export default function App() {
     if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
     if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
     if (timeMode === 'history') return 'Nothing older than 4h in this desk cut. Switch to Live.'
-    if (horizon === 'forecast') return 'No forecast events near our sites in this cut.'
-    if (horizon === 'live') return 'No live events near our sites in this cut.'
+    if (timeMode === 'forecast') return 'No forecast events in this cut.'
     if (siteFilterId) return `No hits on ${siteName}.`
-    return 'No live or forecast events near our sites in this cut.'
+    return 'No live events in this cut.'
   })()
 
   const pickEvent = (id, opts = {}) => {
@@ -360,8 +353,10 @@ export default function App() {
         <div className="ops">
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
             <GlobeMap
-              events={filtered}
-              assets={ASSETS}
+              events={globeEvents}
+              assets={GLOBE_ASSETS}
+              mapEvents={filtered}
+              mapAssets={ASSETS}
               selected={selected}
               onSelect={(sel) => {
                 if (!sel) {
@@ -381,33 +376,6 @@ export default function App() {
             />
           </Suspense>
 
-          <SideRail
-            now={now}
-            cats={cats}
-            sevs={sevs}
-            setCats={setCats}
-            setSevs={setSevs}
-            affectsOnly={affectsOnly}
-            onAffects={() => {
-              setAffectsOnly((v) => {
-                const next = !v
-                setFeedMode((m) => {
-                  if (next) return 'proximity'
-                  if (m === 'proximity') return 'geographical'
-                  return m
-                })
-                return next
-              })
-            }}
-            allEvents={enriched}
-            assets={ASSETS}
-            filteredCount={filtered.length}
-            latencyMs={latencyMs}
-            log={log}
-            onPickSite={pickAsset}
-            siteFilterId={siteFilterId}
-          />
-
           <EventFeed
             events={filtered}
             selectedId={selectedId}
@@ -416,10 +384,7 @@ export default function App() {
             counts={counts}
             freshId={freshId}
             timeMode={timeMode}
-            siteName={siteName}
             emptyHint={emptyHint}
-            horizon={horizon}
-            onHorizon={setHorizon}
           />
 
           {toast && (
