@@ -1,4 +1,4 @@
-# ATOM-CORVEX Operations POC
+# frontend
 
 GSOC watch floor: 3D globe, animated hazards, asset and Deutsche Bank HQ proximity, explainable impact score.
 
