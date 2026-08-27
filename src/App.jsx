@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
 import SideRail from './SideRail'
+import AlertsSummaryStrip, { ALERT_FILTERS } from './AlertsSummaryStrip'
+import CoordStrip from './CoordStrip'
+import RiskScoreRow from './RiskScoreRow'
 import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
@@ -28,6 +31,7 @@ export default function App() {
   const [log, setLog] = useState(['Desk open · waiting on ATOM-CORVEX'])
   const [freshId, setFreshId] = useState(null)
   const [toast, setToast] = useState(null)
+  const [stripFilter, setStripFilter] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
   const [scene, setScene] = useState({
     pulse: false,
@@ -113,8 +117,47 @@ export default function App() {
     if (needle && !searchHay(e).includes(needle)) return false
     return true
   })
-  const globeEvents = listed
-  const filtered = listed
+
+  const stripFiltered = listed.filter((e) => {
+    if (!stripFilter) return true
+    switch (stripFilter) {
+      case ALERT_FILTERS.total:
+        return timeMode === 'forecast' ? isForecastEvent(e) : !isForecastEvent(e)
+      case ALERT_FILTERS.nearSites:
+        return e.linked
+      case ALERT_FILTERS.upcoming:
+        return isForecastEvent(e) && inNextTwoDays(e)
+      case ALERT_FILTERS.crucial:
+        return e.severity === 'high'
+      case ALERT_FILTERS.warning:
+        return e.severity === 'medium'
+      case ALERT_FILTERS.notification:
+        return e.severity === 'low'
+      case ALERT_FILTERS.informative:
+        return e.category === 'environmental'
+      case ALERT_FILTERS.intelligence:
+        return e.category === 'security' || e.category === 'geopolitical'
+      default:
+        return true
+    }
+  })
+
+  const globeEvents = stripFiltered
+  const filtered = stripFiltered
+
+  const indiaPool = enriched.filter((e) => e.flag === 'IN' && cats[e.category] && sevs[e.severity])
+  const alertStats = {
+    total: timeMode === 'forecast'
+      ? indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length
+      : indiaPool.filter((e) => !isForecastEvent(e)).length,
+    nearSites: indiaPool.filter((e) => e.linked).length,
+    upcoming: indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length,
+    crucial: indiaPool.filter((e) => e.severity === 'high').length,
+    warning: indiaPool.filter((e) => e.severity === 'medium').length,
+    notification: indiaPool.filter((e) => e.severity === 'low').length,
+    informative: indiaPool.filter((e) => e.category === 'environmental').length,
+    intelligence: indiaPool.filter((e) => e.category === 'security' || e.category === 'geopolitical').length,
+  }
 
   const counts = {
     geo: timed.filter((e) => e.flag === 'IN' && cats[e.category] && sevs[e.severity]).length,
@@ -280,17 +323,7 @@ export default function App() {
           <span className="brand-mark">ATOM-CORVEX</span>
           <span className="ops-mode-badge">SATELLITE</span>
         </div>
-        <div className="topbar-coords" aria-live="polite">
-          {focusPoint ? (
-            <>
-              <span className="topbar-coords-label">TARGET · {focusPoint.label}</span>
-              <span className="topbar-coords-val">LAT {focusPoint.lat.toFixed(5)}°</span>
-              <span className="topbar-coords-val">LON {focusPoint.lng.toFixed(5)}°</span>
-            </>
-          ) : (
-            <span className="topbar-coords-hint">Select an event or site for latitude / longitude</span>
-          )}
-        </div>
+        <div className="topbar-spacer" />
         <div className="top-right">
           <span className="ops-live-pill">
             <span className="live-dot" />
@@ -312,6 +345,19 @@ export default function App() {
           <span className="stamp ops-clock">{clock(now.getTime())}</span>
         </div>
       </header>
+
+      <div className="ops-chrome-stack">
+        <AlertsSummaryStrip
+          stats={alertStats}
+          activeFilter={stripFilter}
+          onFilter={setStripFilter}
+          windowLabel={timeMode === 'forecast' ? '+2d' : 'live'}
+        />
+        <div className="ops-meta-row">
+          <CoordStrip focusPoint={focusPoint} />
+          <RiskScoreRow event={selectedEvent} pool={indiaPool} />
+        </div>
+      </div>
 
       <div className="ops">
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
@@ -336,8 +382,8 @@ export default function App() {
               scene={scene}
               pulseEventId={scene.pulse ? DEMO.eventId : null}
               highlightAssetId={scene.warehouse ? DEMO.assetId : null}
-              focusPoint={focusPoint}
-            />
+            focusPoint={focusPoint}
+          />
           </Suspense>
 
           <SideRail
@@ -349,7 +395,6 @@ export default function App() {
             filteredCount={filtered.length}
             latencyMs={latencyMs}
             log={log}
-            focusPoint={focusPoint}
             counts={{
               live: counts.live,
               forecast: counts.forecast,

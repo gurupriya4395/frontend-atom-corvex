@@ -8,6 +8,62 @@
 }
 .card .haz { width: 32px; height: 32px; }
 
+/* TAK-style affiliation frames (simplified MIL-STD-2525) */
+.tak-sym {
+  position: relative;
+  width: 34px;
+  height: 34px;
+}
+.tak-frame,
+.pin-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid #eab308;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.tak-sym.aff-friendly .tak-frame,
+.pin.aff-friendly .pin-frame {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+.tak-sym.aff-hostile .tak-frame,
+.pin.aff-hostile .pin-frame {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+}
+.tak-sym.aff-neutral .tak-frame,
+.pin.aff-neutral .pin-frame {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+.tak-sym.aff-unknown .tak-frame,
+.pin.aff-unknown .pin-frame {
+  border-color: #eab308;
+  background: rgba(234, 179, 8, 0.08);
+  border-radius: 50%;
+  clip-path: none;
+}
+.tak-glyph {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+.tak-sym.sev-high .tak-frame { box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35); }
+.tak-sym.sev-medium .tak-frame { box-shadow: 0 0 0 1px rgba(244, 114, 182, 0.3); }
+.tak-sym.sev-low .tak-frame { box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3); }
+.pin {
+  position: relative;
+}
+.pin .pin-frame {
+  inset: -2px 4px 14px;
+  border-radius: 2px;
+}
+.pin.aff-friendly .pin-frame { clip-path: none; border-radius: 2px; }
+
 /* FIRE */
 .flame {
   position: relative;

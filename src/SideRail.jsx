@@ -7,7 +7,6 @@ export default function SideRail({
   filteredCount,
   latencyMs,
   log,
-  focusPoint,
   counts = {},
 }) {
   const utc = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' })
@@ -27,28 +26,6 @@ export default function SideRail({
         </div>
         <span className="ops-rail-time">{utc} UTC</span>
       </header>
-
-      {focusPoint ? (
-        <div className="coord-panel">
-          <span className="coord-panel-tag">TARGET · {focusPoint.type}</span>
-          <strong className="coord-panel-name">{focusPoint.label}</strong>
-          <div className="coord-panel-grid">
-            <div>
-              <span>LAT</span>
-              <b>{focusPoint.lat.toFixed(5)}°</b>
-            </div>
-            <div>
-              <span>LON</span>
-              <b>{focusPoint.lng.toFixed(5)}°</b>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="coord-panel empty">
-          <span className="coord-panel-tag">NO TARGET</span>
-          <p>Click an event or site on the map for coordinates.</p>
-        </div>
-      )}
 
       <div className="ops-summary">
         <div className="ops-summary-item">

@@ -1,6 +1,14 @@
 export function eventMarkerHtml(event) {
   const impact = event.impact || 'none'
-  return `<span class="haz haz-${event.kind} impact-${impact}" title="${escapeHtml(event.title)}">${inner(event.kind)}</span>`
+  const sev = event.severity || 'medium'
+  const aff = affiliationClass(event)
+  return `<span class="haz tak-sym haz-${event.kind} sev-${sev} aff-${aff} impact-${impact}" title="${escapeHtml(event.title)}"><span class="tak-frame" aria-hidden="true"></span><span class="tak-glyph">${inner(event.kind)}</span></span>`
+}
+
+function affiliationClass(event) {
+  if (event.category === 'security') return 'hostile'
+  if (event.category === 'geopolitical') return 'neutral'
+  return 'unknown'
 }
 
 export function eventSourceHref(event) {
@@ -37,7 +45,8 @@ export function eventCalloutHtml(event) {
 export function assetMarkerHtml(asset) {
   const db = asset.org === 'deutsche-bank'
   const label = db ? `DB ${asset.city}` : asset.name.split(' ')[0]
-  return `<span class="pin pin-${asset.criticality}${db ? ' pin-db' : ''}" title="${escapeHtml(asset.name)}"><i></i><b>${escapeHtml(label)}</b></span>`
+  const aff = db ? 'friendly' : 'neutral'
+  return `<span class="pin pin-${asset.criticality} aff-${aff}${db ? ' pin-db' : ''}" title="${escapeHtml(asset.name)}"><span class="tak-frame pin-frame" aria-hidden="true"></span><i></i><b>${escapeHtml(label)}</b></span>`
 }
 
 function inner(kind) {

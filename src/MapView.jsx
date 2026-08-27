@@ -305,13 +305,6 @@ export default function MapView({
         </div>
       )}
       <div className="terrain-chrome">
-        {focusPoint && (
-          <div className="map-coord-readout" aria-live="polite">
-            <span className="map-coord-label">{focusPoint.label}</span>
-            <span className="map-coord-val">LAT {focusPoint.lat.toFixed(5)}°</span>
-            <span className="map-coord-val">LON {focusPoint.lng.toFixed(5)}°</span>
-          </div>
-        )}
         <div className="terrain-tools">
           <button type="button" className="terrain-btn" onClick={zoomOut}>
             Zoom out

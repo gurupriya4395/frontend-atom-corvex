@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { eventMarkerHtml, assetMarkerHtml } from './markers'
+import { fmtLat, fmtLng } from './coords'
 
 const R = 100
 
@@ -181,10 +182,10 @@ export default function GlobeMap({
             <span>SAT-CORVEX</span>
             {focusPoint ? (
               <>
-                <b className="telemetry-target">
-                  {focusPoint.label} · LAT {focusPoint.lat.toFixed(5)}° LON {focusPoint.lng.toFixed(5)}°
-                </b>
-                <span className="telemetry-sub">CAM {hud.lat.toFixed(2)}° {hud.lng.toFixed(2)}° · ALT {hud.alt.toFixed(2)}</span>
+                <b className="telemetry-target">{focusPoint.label}</b>
+                <span className="telemetry-sub">
+                  CAM {fmtLat(hud.lat)} {fmtLng(hud.lng)} · ALT {hud.alt.toFixed(2)}
+                </span>
               </>
             ) : (
               <>
