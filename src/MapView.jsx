@@ -4,23 +4,35 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
 import { MUMBAI_FLOOD_ZONE } from './data'
 
-/** Carto Voyager raster — reliable roads/labels on a light basemap. */
-const STREET_STYLE = {
+/** Esri World Imagery — satellite basemap (ArcGIS Mission / TAK-style). */
+const SATELLITE_STYLE = {
   version: 8,
   sources: {
-    carto: {
+    imagery: {
       type: 'raster',
       tiles: [
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      attribution: '© Esri',
+      maxzoom: 19,
+    },
+    labels: {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
+        'https://d.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png',
       ],
       tileSize: 256,
       attribution: '© CARTO © OpenStreetMap',
     },
   },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto', minzoom: 0, maxzoom: 22 }],
+  layers: [
+    { id: 'imagery', type: 'raster', source: 'imagery', minzoom: 0, maxzoom: 22 },
+    { id: 'labels', type: 'raster', source: 'labels', minzoom: 0, maxzoom: 22, paint: { 'raster-opacity': 0.88 } },
+  ],
 }
 
 export default function MapView({
@@ -32,6 +44,7 @@ export default function MapView({
   timeMode = 'live',
   scene = {},
   highlightAssetId,
+  focusPoint = null,
   active = true,
 }) {
   const wrapRef = useRef(null)
@@ -60,7 +73,7 @@ export default function MapView({
       try {
         map = new Map({
           container: el,
-          style: STREET_STYLE,
+          style: SATELLITE_STYLE,
           center: [72.8777, 19.076],
           zoom: 12,
           pitch: 0,
@@ -281,7 +294,7 @@ export default function MapView({
     <div className="map-el terrain-map">
       <div className="terrain-canvas" ref={wrapRef} />
       <div className="desk-hud" ref={hudRef} />
-      {!ready && !fail && <div className="terrain-loading">Loading streets…</div>}
+      {!ready && !fail && <div className="terrain-loading">Loading satellite imagery…</div>}
       {fail && (
         <div className="terrain-fail">
           <p>Streets did not load.</p>
@@ -292,6 +305,13 @@ export default function MapView({
         </div>
       )}
       <div className="terrain-chrome">
+        {focusPoint && (
+          <div className="map-coord-readout" aria-live="polite">
+            <span className="map-coord-label">{focusPoint.label}</span>
+            <span className="map-coord-val">LAT {focusPoint.lat.toFixed(5)}°</span>
+            <span className="map-coord-val">LON {focusPoint.lng.toFixed(5)}°</span>
+          </div>
+        )}
         <div className="terrain-tools">
           <button type="button" className="terrain-btn" onClick={zoomOut}>
             Zoom out

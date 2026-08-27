@@ -140,6 +140,23 @@ export default function App() {
       ? selectedEvent.primary.asset.id
       : selectedAssetId
 
+  const selectedAsset = selectedAssetId ? ASSETS.find((a) => a.id === selectedAssetId) : null
+  const focusPoint = selectedEvent?.coords
+    ? {
+        lat: selectedEvent.coords[1],
+        lng: selectedEvent.coords[0],
+        label: selectedEvent.place?.split(',')[0] || selectedEvent.title,
+        type: 'event',
+      }
+    : selectedAsset?.coords
+      ? {
+          lat: selectedAsset.coords[1],
+          lng: selectedAsset.coords[0],
+          label: selectedAsset.name,
+          type: 'asset',
+        }
+      : null
+
   const emptyHint = (() => {
     if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
     if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
@@ -258,23 +275,33 @@ export default function App() {
         </div>
       )}
 
-      <header className="topbar">
+      <header className="topbar ops-topbar">
         <div className="brand">
           <span className="brand-mark">ATOM-CORVEX</span>
-          <span className="brand-sub">Eyes on operations</span>
+          <span className="ops-mode-badge">SATELLITE</span>
         </div>
-        <nav className="nav">
-          <button className="active" type="button" onClick={() => setPage('operations')}>
-            Floor
-          </button>
-        </nav>
+        <div className="topbar-coords" aria-live="polite">
+          {focusPoint ? (
+            <>
+              <span className="topbar-coords-label">TARGET · {focusPoint.label}</span>
+              <span className="topbar-coords-val">LAT {focusPoint.lat.toFixed(5)}°</span>
+              <span className="topbar-coords-val">LON {focusPoint.lng.toFixed(5)}°</span>
+            </>
+          ) : (
+            <span className="topbar-coords-hint">Select an event or site for latitude / longitude</span>
+          )}
+        </div>
         <div className="top-right">
+          <span className="ops-live-pill">
+            <span className="live-dot" />
+            LIVE DESK
+          </span>
           <button className="ghost run-desk" type="button" onClick={runDesk}>
             Run desk
           </button>
           <input
             ref={searchRef}
-            className="search"
+            className="search ops-search"
             placeholder="Search city, HQ, flood…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -282,7 +309,7 @@ export default function App() {
               if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
             }}
           />
-          <span className="stamp">{clock(now.getTime())}</span>
+          <span className="stamp ops-clock">{clock(now.getTime())}</span>
         </div>
       </header>
 
@@ -309,6 +336,7 @@ export default function App() {
               scene={scene}
               pulseEventId={scene.pulse ? DEMO.eventId : null}
               highlightAssetId={scene.warehouse ? DEMO.assetId : null}
+              focusPoint={focusPoint}
             />
           </Suspense>
 
@@ -318,25 +346,17 @@ export default function App() {
             sevs={sevs}
             setCats={setCats}
             setSevs={setSevs}
-            affectsOnly={affectsOnly}
-            onAffects={() => {
-              setAffectsOnly((v) => {
-                const next = !v
-                setFeedMode((m) => {
-                  if (next) return 'proximity'
-                  if (m === 'proximity') return 'geographical'
-                  return m
-                })
-                return next
-              })
-            }}
-            allEvents={enriched}
-            assets={ASSETS}
             filteredCount={filtered.length}
             latencyMs={latencyMs}
             log={log}
-            onPickSite={pickAsset}
-            siteFilterId={siteFilterId}
+            focusPoint={focusPoint}
+            counts={{
+              live: counts.live,
+              forecast: counts.forecast,
+              geo: enriched.filter((e) => e.flag === 'IN' && e.category === 'geopolitical').length,
+              env: enriched.filter((e) => e.flag === 'IN' && e.category === 'environmental').length,
+              sec: enriched.filter((e) => e.flag === 'IN' && e.category === 'security').length,
+            }}
           />
 
           <EventFeed

@@ -4,66 +4,69 @@ export default function SideRail({
   sevs,
   setCats,
   setSevs,
-  affectsOnly,
-  onAffects,
-  allEvents,
-  assets,
   filteredCount,
   latencyMs,
   log,
-  onPickSite,
-  siteFilterId,
+  focusPoint,
+  counts = {},
 }) {
-  const atRisk = assets.filter((a) =>
-    allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert),
-  ).length
-  const live = allEvents.filter((e) => !e.forecast).length
-  const alerts = allEvents.filter((e) => e.alert).length
+  const utc = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' })
   const mix = {
-    geopolitical: allEvents.filter((e) => e.category === 'geopolitical').length,
-    environmental: allEvents.filter((e) => e.category === 'environmental').length,
-    security: allEvents.filter((e) => e.category === 'security').length,
+    geopolitical: counts.geo || 0,
+    environmental: counts.env || 0,
+    security: counts.sec || 0,
   }
   const mixTotal = Math.max(1, mix.geopolitical + mix.environmental + mix.security)
-  const utc = now.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' })
-  const loc = now.toLocaleTimeString('en-GB', { hour12: false })
-
-  const ranked = [...assets].sort((a, b) => {
-    const hotA = allEvents.some((e) => e.linked && e.primary.asset.id === a.id && e.alert)
-    const hotB = allEvents.some((e) => e.linked && e.primary.asset.id === b.id && e.alert)
-    return Number(hotB) - Number(hotA)
-  })
 
   return (
-    <aside className="rail">
-      <div className="rail-clock">
+    <aside className="rail ops-rail">
+      <header className="ops-rail-head">
         <div>
-          <span className="stamp">UTC</span>
-          <b>{utc}</b>
+          <span className="ops-rail-tag">SITUATION</span>
+          <h3>Desk filter</h3>
         </div>
-        <div>
-          <span className="stamp">Local</span>
-          <b>{loc}</b>
-        </div>
-      </div>
+        <span className="ops-rail-time">{utc} UTC</span>
+      </header>
 
-      <div className="kpis">
-        <div className="kpi">
-          <em>{live}</em>
+      {focusPoint ? (
+        <div className="coord-panel">
+          <span className="coord-panel-tag">TARGET · {focusPoint.type}</span>
+          <strong className="coord-panel-name">{focusPoint.label}</strong>
+          <div className="coord-panel-grid">
+            <div>
+              <span>LAT</span>
+              <b>{focusPoint.lat.toFixed(5)}°</b>
+            </div>
+            <div>
+              <span>LON</span>
+              <b>{focusPoint.lng.toFixed(5)}°</b>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="coord-panel empty">
+          <span className="coord-panel-tag">NO TARGET</span>
+          <p>Click an event or site on the map for coordinates.</p>
+        </div>
+      )}
+
+      <div className="ops-summary">
+        <div className="ops-summary-item">
+          <em>{filteredCount}</em>
+          <span>On desk</span>
+        </div>
+        <div className="ops-summary-item">
+          <em>{counts.live ?? 0}</em>
           <span>Live</span>
         </div>
-        <div className="kpi warn">
-          <em>{atRisk}</em>
-          <span>Sites hot</span>
-        </div>
-        <div className="kpi">
-          <em>{alerts}</em>
-          <span>Alerts</span>
+        <div className="ops-summary-item warn">
+          <em>{counts.forecast ?? 0}</em>
+          <span>+2d</span>
         </div>
       </div>
 
-      <div className="mix">
-        <span className="stamp">On map · {filteredCount}</span>
+      <div className="mix ops-mix">
+        <span className="stamp">Desk mix</span>
         <div className="mix-bar">
           <i className="geo" style={{ width: `${(mix.geopolitical / mixTotal) * 100}%` }} />
           <i className="env" style={{ width: `${(mix.environmental / mixTotal) * 100}%` }} />
@@ -76,52 +79,35 @@ export default function SideRail({
         </div>
       </div>
 
-      <div className="src">
+      <div className="src ops-feed">
         <span className="live-dot" />
-        ATOM-CORVEX
+        CORVEX feed
         <b>{latencyMs} ms</b>
       </div>
 
-      <div
-        className="toggle"
-        onClick={onAffects}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onAffects()
-          }
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        <strong>Near our sites</strong>
-        <div className={`switch ${affectsOnly ? 'on' : ''}`}>
-          <i />
-        </div>
-      </div>
-
-      <div className="filters">
+      <div className="filters ops-filters">
         <div>
-          <label>Desk</label>
+          <label>Category</label>
           <div className="chip-rows">
             {Object.keys(cats).map((k) => (
               <button
                 key={k}
+                type="button"
                 className={`fchip ${cats[k] ? 'on' : ''}`}
                 onClick={() => setCats((c) => ({ ...c, [k]: !c[k] }))}
               >
                 {k}
-                <em>{mix[k] || 0}</em>
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label>Weight</label>
+          <label>Severity</label>
           <div className="chip-rows">
             {Object.keys(sevs).map((k) => (
               <button
                 key={k}
+                type="button"
                 className={`fchip ${k} ${sevs[k] ? 'on' : ''}`}
                 onClick={() => setSevs((s) => ({ ...s, [k]: !s[k] }))}
               >
@@ -132,30 +118,8 @@ export default function SideRail({
         </div>
       </div>
 
-      <label>Sites</label>
-      <ul className="asset-live">
-        {ranked.map((a) => {
-          const hits = allEvents.filter((e) => e.linked && e.primary.asset.id === a.id)
-          const hot = hits.find((e) => e.alert)
-          return (
-            <li
-              key={a.id}
-              className={`${hot ? 'hot' : ''} ${siteFilterId === a.id ? 'on' : ''}`}
-              onClick={() => onPickSite?.(a.id)}
-            >
-              <span className={`status-dot ${hot ? 'hot' : ''}`} />
-              <span className="an">
-                {a.name}
-                {hot && <em>{hot.primary.km.toFixed(1)} km · {hot.kind}</em>}
-              </span>
-              <b>{hits.length}</b>
-            </li>
-          )
-        })}
-      </ul>
-
-      <label>Wire</label>
-      <ul className="wire">
+      <label className="ops-wire-label">Wire</label>
+      <ul className="wire ops-wire">
         {log.map((line, i) => (
           <li key={`${line}-${i}`}>{line}</li>
         ))}

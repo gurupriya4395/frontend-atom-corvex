@@ -20,6 +20,7 @@ export default function GlobeMap({
   scene = {},
   pulseEventId,
   highlightAssetId,
+  focusPoint = null,
 }) {
   const mode = mapMode
   const setMode = (m) => onMapMode?.(m)
@@ -115,7 +116,7 @@ export default function GlobeMap({
   }
 
   return (
-    <div className={`map-wrap ${mode === 'map' ? 'is-streets' : ''}`}>
+    <div className={`map-wrap ${mode === 'map' ? 'is-imagery' : 'is-satellite'}`}>
       <div className="hud-frame" aria-hidden="true">
         <i className="c tl" />
         <i className="c tr" />
@@ -134,6 +135,7 @@ export default function GlobeMap({
             timeMode={timeMode}
             scene={scene}
             highlightAssetId={highlightAssetId}
+            focusPoint={focusPoint}
             active={mode === 'map'}
           />
         )}
@@ -158,10 +160,10 @@ export default function GlobeMap({
 
       <div className="view-toggle">
         <button className={mode === 'globe' ? 'active' : ''} onClick={() => setMode('globe')}>
-          World
+          Satellite
         </button>
         <button className={mode === 'map' ? 'active' : ''} onClick={() => setMode('map')}>
-          Streets
+          Imagery
         </button>
       </div>
 
@@ -177,21 +179,30 @@ export default function GlobeMap({
         <>
           <div className="telemetry">
             <span>SAT-CORVEX</span>
-            <b>
-              {hud.lat.toFixed(2)}° {hud.lng.toFixed(2)}°
-            </b>
-            <span>ALT {hud.alt.toFixed(2)}</span>
+            {focusPoint ? (
+              <>
+                <b className="telemetry-target">
+                  {focusPoint.label} · LAT {focusPoint.lat.toFixed(5)}° LON {focusPoint.lng.toFixed(5)}°
+                </b>
+                <span className="telemetry-sub">CAM {hud.lat.toFixed(2)}° {hud.lng.toFixed(2)}° · ALT {hud.alt.toFixed(2)}</span>
+              </>
+            ) : (
+              <>
+                <b>
+                  {hud.lat.toFixed(4)}° {hud.lng.toFixed(4)}°
+                </b>
+                <span>ALT {hud.alt.toFixed(2)} · click a pin for target coords</span>
+              </>
+            )}
             <i />
           </div>
 
           <div className="hud">
             <div className="legend">
-              <h4>World</h4>
-              <div className="lg">Icon = event type</div>
-              <div className="lg">Ring = linked / high impact</div>
-              <div className="lg">Dotted arc = event → site</div>
-              <div className="lg">Dashed ring = fence</div>
-              <div className="lg">Drag to look around</div>
+              <h4>Satellite</h4>
+              <div className="lg">India events · DB offices worldwide</div>
+              <div className="lg">Click pin for lat / lon</div>
+              <div className="lg">Drag to pan · scroll to zoom</div>
             </div>
           </div>
         </>
@@ -202,7 +213,7 @@ export default function GlobeMap({
 
 function createWorld(el, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#e8eef6')
+  scene.background = new THREE.Color('#070b10')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 40, 280)
@@ -241,31 +252,42 @@ function createWorld(el, getOnSelect) {
   const earthTex = paintLightEarth()
   const globeMat = new THREE.MeshPhongMaterial({
     map: earthTex,
-    color: 0xffffff,
-    emissive: 0x0a0c10,
-    emissiveIntensity: 0.04,
-    shininess: 22,
-    specular: 0x666677,
+    color: 0xd8dde4,
+    emissive: 0x040608,
+    emissiveIntensity: 0.08,
+    shininess: 18,
+    specular: 0x334455,
   })
   const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
   scene.add(globe)
 
   new THREE.TextureLoader().load(
-    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-day.jpg',
+    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
     (remote) => {
       remote.colorSpace = THREE.SRGBColorSpace
       remote.anisotropy = 8
       globeMat.map = remote
       globeMat.needsUpdate = true
     },
+    undefined,
+    () => {
+      new THREE.TextureLoader().load(
+        'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-day.jpg',
+        (fallback) => {
+          fallback.colorSpace = THREE.SRGBColorSpace
+          globeMat.map = fallback
+          globeMat.needsUpdate = true
+        },
+      )
+    },
   )
 
   const atmos = new THREE.Mesh(
     new THREE.SphereGeometry(R * 1.045, 48, 32),
     new THREE.MeshBasicMaterial({
-      color: 0x8bafd4,
+      color: 0x3d6a8a,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.1,
       side: THREE.BackSide,
     }),
   )
