@@ -105,6 +105,15 @@ export default function GlobeMap({
   useEffect(() => {
     worldRef.current?.setAutoRotate(false)
     worldRef.current?.setPaused(mode !== 'globe')
+    if (mode === 'globe') {
+      requestAnimationFrame(() => {
+        worldRef.current?.resize()
+      })
+      const late = [80, 320].map((ms) =>
+        setTimeout(() => worldRef.current?.resize(), ms),
+      )
+      return () => late.forEach(clearTimeout)
+    }
   }, [mode, selected])
 
   useEffect(() => {
@@ -217,7 +226,7 @@ function createWorld(el, getOnSelect) {
   scene.background = new THREE.Color('#070b10')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
-  camera.position.set(0, 40, 280)
+  camera.position.set(0, 60, 320)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
@@ -239,8 +248,8 @@ function createWorld(el, getOnSelect) {
   controls.enableZoom = true
   controls.target.set(0, 0, 0)
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.15))
-  const sun = new THREE.DirectionalLight(0xfff8f0, 1.45)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.35))
+  const sun = new THREE.DirectionalLight(0xfff8f0, 1.65)
   sun.position.set(-70, 120, 100)
   scene.add(sun)
   const fill = new THREE.DirectionalLight(0xc8dcff, 0.42)
@@ -253,11 +262,11 @@ function createWorld(el, getOnSelect) {
   const earthTex = paintLightEarth()
   const globeMat = new THREE.MeshPhongMaterial({
     map: earthTex,
-    color: 0xd8dde4,
-    emissive: 0x040608,
-    emissiveIntensity: 0.08,
-    shininess: 18,
-    specular: 0x334455,
+    color: 0xe8eef4,
+    emissive: 0x0a1018,
+    emissiveIntensity: 0.12,
+    shininess: 22,
+    specular: 0x556677,
   })
   const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
   scene.add(globe)
@@ -424,14 +433,15 @@ function createWorld(el, getOnSelect) {
   })
 
   const flyTo = (lat, lng, close = false) => {
-    animateCamera(latLngToVec3(lat, lng, close ? 0.55 : 1.55), 1400)
+    const alt = close ? 0.85 : 1.85
+    animateCamera(latLngToVec3(lat, lng, alt), 1400)
   }
 
   const zoomOut = () => {
     cancelFly()
     controls.enabled = true
     controls.target.set(0, 0, 0)
-    animateCamera(new THREE.Vector3(0, 70, 460), 900, { lockControls: false })
+    animateCamera(new THREE.Vector3(0, 90, 320), 900, { lockControls: false })
   }
 
   return {

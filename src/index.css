@@ -24,6 +24,9 @@
   --bezel: 16px;
   --topbar-h: 54px;
   --chrome-stack-h: 108px;
+  --map-bottom: 64px;
+  --map-inset-left: 282px;
+  --map-inset-right: 332px;
   --desk-offset: calc(var(--topbar-h) + var(--chrome-stack-h));
   font-synthesis: none;
 }
@@ -446,6 +449,10 @@ button { cursor: pointer; }
 .risk-row.desk .risk-score-main strong { color: #c4b5fd; }
 
 @media (max-width: 1180px) {
+  :root {
+    --map-inset-left: 14px;
+    --map-inset-right: 14px;
+  }
   .ops-meta-row {
     grid-template-columns: 1fr;
   }
@@ -582,7 +589,7 @@ button { cursor: pointer; }
 .map-coord-readout {
   position: absolute;
   top: calc(var(--desk-offset) + 6px);
-  left: 292px;
+  left: calc(var(--map-inset-left) + 10px);
   z-index: 6;
   display: flex;
   flex-wrap: wrap;
@@ -742,7 +749,11 @@ button { cursor: pointer; }
 .globe-stage,
 .map-stage {
   position: absolute;
-  inset: 0;
+  top: var(--desk-offset);
+  left: var(--map-inset-left);
+  right: var(--map-inset-right);
+  bottom: var(--map-bottom);
+  z-index: 1;
 }
 .globe-stage {
   background:
@@ -753,11 +764,19 @@ button { cursor: pointer; }
   width: 100% !important;
   height: 100% !important;
 }
-.globe-stage.off {
-  display: none;
+.globe-stage .globe-labels {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 .globe-stage.off,
-.map-stage.off { visibility: hidden; pointer-events: none; }
+.map-stage.off {
+  display: none;
+  visibility: hidden;
+  pointer-events: none;
+}
 .globe-stage.on {
   display: block;
   visibility: visible;
@@ -928,6 +947,18 @@ button { cursor: pointer; }
 }
 .map-wrap.is-imagery {
   background: #0a0e14;
+}
+.map-wrap.is-satellite {
+  background: #070b10;
+}
+.map-wrap.is-satellite::after {
+  display: none;
+}
+.map-wrap.is-satellite .hud-frame {
+  top: calc(var(--desk-offset) + 8px);
+  left: calc(var(--map-inset-left) + 8px);
+  right: calc(var(--map-inset-right) + 8px);
+  bottom: calc(var(--map-bottom) + 8px);
 }
 .map-wrap.is-satellite .telemetry {
   background: rgba(12, 18, 26, 0.92);
@@ -1156,7 +1187,10 @@ button { cursor: pointer; }
 .globe-labels .globe-pin { pointer-events: auto; }
 .globe-msg {
   position: absolute;
-  inset: 0;
+  top: var(--desk-offset);
+  left: var(--map-inset-left);
+  right: var(--map-inset-right);
+  bottom: var(--map-bottom);
   z-index: 4;
   display: grid;
   place-items: center;
