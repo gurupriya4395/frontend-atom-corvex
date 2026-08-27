@@ -7,6 +7,7 @@ import RiskScoreRow from './RiskScoreRow'
 import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './data'
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
+import { fmtLat, fmtLng } from './coords'
 import './index.css'
 import './markers.css'
 
@@ -224,10 +225,10 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (mapMode !== 'map' || selectedId || selectedAssetId) return
+    if (selectedId || selectedAssetId) return
     const first = filtered.find((e) => e.linked) || filtered[0]
     if (first) setSelectedId(first.id)
-  }, [mapMode, filtered, selectedId, selectedAssetId])
+  }, [filtered, selectedId, selectedAssetId])
 
   const clearSelection = () => {
     setSelectedId(null)
@@ -323,7 +324,21 @@ export default function App() {
           <span className="brand-mark">ATOM-CORVEX</span>
           <span className="ops-mode-badge">SATELLITE</span>
         </div>
-        <div className="topbar-spacer" />
+        <div className="topbar-coords-panel" aria-live="polite">
+          {focusPoint ? (
+            <>
+              <span className="topbar-coords-label">{focusPoint.label}</span>
+              <span className="topbar-coords-val">
+                <em>LAT</em> {fmtLat(focusPoint.lat)}
+              </span>
+              <span className="topbar-coords-val">
+                <em>LON</em> {fmtLng(focusPoint.lng)}
+              </span>
+            </>
+          ) : (
+            <span className="topbar-coords-hint">Click an event or site for latitude / longitude</span>
+          )}
+        </div>
         <div className="top-right">
           <span className="ops-live-pill">
             <span className="live-dot" />

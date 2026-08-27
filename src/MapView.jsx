@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AttributionControl, LngLatBounds, Map, Marker, NavigationControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers'
+import { fmtLat, fmtLng } from './coords'
 import { MUMBAI_FLOOD_ZONE } from './data'
 
 /** Esri World Imagery — satellite basemap (ArcGIS Mission / TAK-style). */
@@ -305,6 +306,17 @@ export default function MapView({
         </div>
       )}
       <div className="terrain-chrome">
+        {focusPoint && (
+          <div className="map-coord-readout" aria-live="polite">
+            <span className="map-coord-label">{focusPoint.label}</span>
+            <span className="map-coord-val">
+              <em>LAT</em> {fmtLat(focusPoint.lat)}
+            </span>
+            <span className="map-coord-val">
+              <em>LON</em> {fmtLng(focusPoint.lng)}
+            </span>
+          </div>
+        )}
         <div className="terrain-tools">
           <button type="button" className="terrain-btn" onClick={zoomOut}>
             Zoom out

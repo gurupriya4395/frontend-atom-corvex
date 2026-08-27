@@ -10,7 +10,7 @@ export default function EventFeed({ events, selectedId, onSelect, now, counts, f
   const n = timeMode === 'forecast' ? counts.forecast : counts.live
 
   return (
-    <aside className="feed">
+    <aside className="feed ops-feed">
       <div className="feed-head">
         <div className="feed-title">
           <h2>Proximity</h2>
