@@ -9,13 +9,13 @@ const FILTERS = {
   intelligence: 'intelligence',
 }
 
-export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, windowLabel = 'live' }) {
+export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, windowLabel = 'Live now' }) {
   const toggle = (key) => onFilter?.(activeFilter === key ? null : key)
 
   return (
-    <div className="alerts-strip" role="region" aria-label="Alerts summary">
+    <div className="alerts-strip" role="region" aria-label="Alert summary">
       <div className="alerts-strip-head">
-        <span className="alerts-strip-title">Alerts</span>
+        <span className="alerts-strip-title">Summary</span>
         <span className="alerts-strip-window">{windowLabel}</span>
       </div>
       <div className="alerts-strip-body">
@@ -26,7 +26,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.total)}
           >
             <em>{stats.total}</em>
-            <span>Total</span>
+            <span>All</span>
           </button>
           <button
             type="button"
@@ -34,7 +34,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.nearSites)}
           >
             <em>{stats.nearSites}</em>
-            <span>Near sites</span>
+            <span>Near assets</span>
           </button>
           <button
             type="button"
@@ -53,7 +53,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.crucial)}
           >
             <em>{stats.crucial}</em>
-            <span>Crucial</span>
+            <span>High</span>
           </button>
           <button
             type="button"
@@ -61,7 +61,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.warning)}
           >
             <em>{stats.warning}</em>
-            <span>Warning</span>
+            <span>Medium</span>
           </button>
           <button
             type="button"
@@ -69,7 +69,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.notification)}
           >
             <em>{stats.notification}</em>
-            <span>Notification</span>
+            <span>Low</span>
           </button>
         </div>
         <div className="alerts-divider" />
@@ -80,7 +80,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.informative)}
           >
             <em>{stats.informative}</em>
-            <span>Informative</span>
+            <span>Weather</span>
           </button>
           <button
             type="button"
@@ -88,7 +88,7 @@ export default function AlertsSummaryStrip({ stats, activeFilter, onFilter, wind
             onClick={() => toggle(FILTERS.intelligence)}
           >
             <em>{stats.intelligence}</em>
-            <span>Intelligence</span>
+            <span>Security</span>
           </button>
         </div>
       </div>

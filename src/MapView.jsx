@@ -310,10 +310,10 @@ export default function MapView({
           <div className="map-coord-readout" aria-live="polite">
             <span className="map-coord-label">{focusPoint.label}</span>
             <span className="map-coord-val">
-              <em>LAT</em> {fmtLat(focusPoint.lat)}
+              <em>Lat</em> {fmtLat(focusPoint.lat)}
             </span>
             <span className="map-coord-val">
-              <em>LON</em> {fmtLng(focusPoint.lng)}
+              <em>Long</em> {fmtLng(focusPoint.lng)}
             </span>
           </div>
         )}

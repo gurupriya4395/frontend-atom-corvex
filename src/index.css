@@ -22,8 +22,8 @@
   --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 24px 60px rgba(99, 102, 241, 0.12);
   --bezel: 16px;
-  --topbar-h: 52px;
-  --chrome-stack-h: 100px;
+  --topbar-h: 54px;
+  --chrome-stack-h: 108px;
   --desk-offset: calc(var(--topbar-h) + var(--chrome-stack-h));
   font-synthesis: none;
 }
@@ -58,7 +58,9 @@ button { cursor: pointer; }
 }
 .ops-topbar .brand-mark {
   color: #e8f4fc;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 .ops-mode-badge {
   display: inline-block;
@@ -66,12 +68,13 @@ button { cursor: pointer; }
   padding: 2px 8px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.35);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.35);
   border-radius: 4px;
-  background: rgba(56, 189, 248, 0.08);
+  background: rgba(15, 23, 42, 0.55);
+  text-transform: none;
 }
 .topbar-coords {
   display: flex;
@@ -441,6 +444,19 @@ button { cursor: pointer; }
   background: rgba(239, 68, 68, 0.12);
 }
 .risk-row.desk .risk-score-main strong { color: #c4b5fd; }
+
+@media (max-width: 1180px) {
+  .ops-meta-row {
+    grid-template-columns: 1fr;
+  }
+  .topbar-coords-panel {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .topbar-coords-label {
+    max-width: 140px;
+  }
+}
 
 .ops-topbar .ghost.run-desk {
   color: #e2e8f0;

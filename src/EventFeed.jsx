@@ -6,7 +6,7 @@ function isForecastEvent(ev) {
 }
 
 export default function EventFeed({ events, selectedId, onSelect, now, counts, freshId, timeMode, emptyHint }) {
-  const modeLabel = timeMode === 'forecast' ? 'Forecast · next 2 days' : 'Live'
+  const modeLabel = timeMode === 'forecast' ? 'Forecast · 2 days' : 'Live feed'
   const n = timeMode === 'forecast' ? counts.forecast : counts.live
 
   return (

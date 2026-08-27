@@ -1,4 +1,5 @@
 import { fmtLat, fmtLng, fmtPair } from './coords'
+import { FOCUS_TYPE_LABELS } from './labels'
 
 export default function CoordStrip({ focusPoint }) {
   return (
@@ -6,7 +7,7 @@ export default function CoordStrip({ focusPoint }) {
       {focusPoint ? (
         <>
           <div className="coord-strip-head">
-            <span className="coord-strip-tag">TARGET · {focusPoint.type}</span>
+            <span className="coord-strip-tag">{FOCUS_TYPE_LABELS[focusPoint.type] || 'Selected'}</span>
             <span className="coord-strip-name">{focusPoint.label}</span>
           </div>
           <div className="coord-strip-geo">
@@ -19,13 +20,13 @@ export default function CoordStrip({ focusPoint }) {
               <strong>{fmtLng(focusPoint.lng)}</strong>
             </div>
             <div className="coord-strip-cell dd">
-              <span>Decimal</span>
+              <span>Coordinates</span>
               <strong>{fmtPair(focusPoint.lat, focusPoint.lng)}</strong>
             </div>
           </div>
         </>
       ) : (
-        <span className="coord-strip-empty">No target — select an event or site for coordinates</span>
+        <span className="coord-strip-empty">Select an event or site to view coordinates</span>
       )}
     </div>
   )

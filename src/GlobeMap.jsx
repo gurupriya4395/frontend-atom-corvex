@@ -161,10 +161,10 @@ export default function GlobeMap({
 
       <div className="view-toggle">
         <button className={mode === 'globe' ? 'active' : ''} onClick={() => setMode('globe')}>
-          Satellite
+          Globe
         </button>
         <button className={mode === 'map' ? 'active' : ''} onClick={() => setMode('map')}>
-          Imagery
+          Map
         </button>
       </div>
 
@@ -179,20 +179,20 @@ export default function GlobeMap({
       {mode === 'globe' && (
         <>
           <div className="telemetry">
-            <span>SAT-CORVEX</span>
+            <span>Camera</span>
             {focusPoint ? (
               <>
                 <b className="telemetry-target">{focusPoint.label}</b>
                 <span className="telemetry-sub">
-                  CAM {fmtLat(hud.lat)} {fmtLng(hud.lng)} · ALT {hud.alt.toFixed(2)}
+                  {fmtLat(hud.lat)} {fmtLng(hud.lng)} · alt {hud.alt.toFixed(1)}
                 </span>
               </>
             ) : (
               <>
                 <b>
-                  {hud.lat.toFixed(4)}° {hud.lng.toFixed(4)}°
+                  {fmtLat(hud.lat)} {fmtLng(hud.lng)}
                 </b>
-                <span>ALT {hud.alt.toFixed(2)} · click a pin for target coords</span>
+                <span>Alt {hud.alt.toFixed(1)} · select a pin for details</span>
               </>
             )}
             <i />
@@ -200,9 +200,9 @@ export default function GlobeMap({
 
           <div className="hud">
             <div className="legend">
-              <h4>Satellite</h4>
-              <div className="lg">India events · DB offices worldwide</div>
-              <div className="lg">Click pin for lat / lon</div>
+              <h4>Globe view</h4>
+              <div className="lg">India events and global offices</div>
+              <div className="lg">Select a pin for coordinates</div>
               <div className="lg">Drag to pan · scroll to zoom</div>
             </div>
           </div>

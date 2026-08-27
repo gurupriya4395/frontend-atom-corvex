@@ -8,6 +8,7 @@ import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './da
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import { fmtLat, fmtLng } from './coords'
+import { VIEW_LABELS, TIME_WINDOW_LABELS } from './labels'
 import './index.css'
 import './markers.css'
 
@@ -29,7 +30,7 @@ export default function App() {
   const [boot, setBoot] = useState(true)
   const [now, setNow] = useState(() => new Date())
   const [latencyMs, setLatencyMs] = useState(86)
-  const [log, setLog] = useState(['Desk open · waiting on ATOM-CORVEX'])
+  const [log, setLog] = useState(['Desk ready · waiting for events'])
   const [freshId, setFreshId] = useState(null)
   const [toast, setToast] = useState(null)
   const [stripFilter, setStripFilter] = useState(null)
@@ -303,9 +304,9 @@ export default function App() {
       {boot && (
         <div className="boot">
           <div className="boot-inner">
-            <span className="boot-tag">GSOC · DEMO</span>
-            <h1>ATOM-CORVEX</h1>
-            <p>Raising the desk · CORVEX on the wire</p>
+            <span className="boot-tag">Demo</span>
+            <h1>Atom Corvex</h1>
+            <p>Starting operations view</p>
             <ol className="boot-steps">
               <li>Ingest</li>
               <li>Correlate</li>
@@ -321,31 +322,31 @@ export default function App() {
 
       <header className="topbar ops-topbar">
         <div className="brand">
-          <span className="brand-mark">ATOM-CORVEX</span>
-          <span className="ops-mode-badge">SATELLITE</span>
+          <span className="brand-mark">Atom Corvex</span>
+          <span className="ops-mode-badge">{VIEW_LABELS[mapMode] || VIEW_LABELS.globe}</span>
         </div>
         <div className="topbar-coords-panel" aria-live="polite">
           {focusPoint ? (
             <>
               <span className="topbar-coords-label">{focusPoint.label}</span>
               <span className="topbar-coords-val">
-                <em>LAT</em> {fmtLat(focusPoint.lat)}
+                <em>Lat</em> {fmtLat(focusPoint.lat)}
               </span>
               <span className="topbar-coords-val">
-                <em>LON</em> {fmtLng(focusPoint.lng)}
+                <em>Long</em> {fmtLng(focusPoint.lng)}
               </span>
             </>
           ) : (
-            <span className="topbar-coords-hint">Click an event or site for latitude / longitude</span>
+            <span className="topbar-coords-hint">Select an event or site to see coordinates</span>
           )}
         </div>
         <div className="top-right">
           <span className="ops-live-pill">
             <span className="live-dot" />
-            LIVE DESK
+            Live
           </span>
           <button className="ghost run-desk" type="button" onClick={runDesk}>
-            Run desk
+            Demo
           </button>
           <input
             ref={searchRef}
@@ -366,7 +367,7 @@ export default function App() {
           stats={alertStats}
           activeFilter={stripFilter}
           onFilter={setStripFilter}
-          windowLabel={timeMode === 'forecast' ? '+2d' : 'live'}
+          windowLabel={TIME_WINDOW_LABELS[timeMode] || TIME_WINDOW_LABELS.live}
         />
         <div className="ops-meta-row">
           <CoordStrip focusPoint={focusPoint} />
@@ -432,7 +433,7 @@ export default function App() {
 
           {toast && (
             <div className="wire-toast">
-              <span>ON WIRE</span>
+              <span>New</span>
               <b>{toast.title}</b>
               <em>{toast.place}</em>
             </div>

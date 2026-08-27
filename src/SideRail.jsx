@@ -1,3 +1,5 @@
+import { CATEGORY_LABELS, SEVERITY_LABELS } from './labels'
+
 export default function SideRail({
   now,
   cats,
@@ -21,8 +23,8 @@ export default function SideRail({
     <aside className="rail ops-rail">
       <header className="ops-rail-head">
         <div>
-          <span className="ops-rail-tag">SITUATION</span>
-          <h3>Desk filter</h3>
+          <span className="ops-rail-tag">Filters</span>
+          <h3>Refine list</h3>
         </div>
         <span className="ops-rail-time">{utc} UTC</span>
       </header>
@@ -30,7 +32,7 @@ export default function SideRail({
       <div className="ops-summary">
         <div className="ops-summary-item">
           <em>{filteredCount}</em>
-          <span>On desk</span>
+          <span>Showing</span>
         </div>
         <div className="ops-summary-item">
           <em>{counts.live ?? 0}</em>
@@ -38,12 +40,12 @@ export default function SideRail({
         </div>
         <div className="ops-summary-item warn">
           <em>{counts.forecast ?? 0}</em>
-          <span>+2d</span>
+          <span>Forecast</span>
         </div>
       </div>
 
       <div className="mix ops-mix">
-        <span className="stamp">Desk mix</span>
+        <span className="stamp">Event mix</span>
         <div className="mix-bar">
           <i className="geo" style={{ width: `${(mix.geopolitical / mixTotal) * 100}%` }} />
           <i className="env" style={{ width: `${(mix.environmental / mixTotal) * 100}%` }} />
@@ -58,7 +60,7 @@ export default function SideRail({
 
       <div className="src ops-feed">
         <span className="live-dot" />
-        CORVEX feed
+        Feed
         <b>{latencyMs} ms</b>
       </div>
 
@@ -73,7 +75,7 @@ export default function SideRail({
                 className={`fchip ${cats[k] ? 'on' : ''}`}
                 onClick={() => setCats((c) => ({ ...c, [k]: !c[k] }))}
               >
-                {k}
+                {CATEGORY_LABELS[k] || k}
               </button>
             ))}
           </div>
@@ -88,14 +90,14 @@ export default function SideRail({
                 className={`fchip ${k} ${sevs[k] ? 'on' : ''}`}
                 onClick={() => setSevs((s) => ({ ...s, [k]: !s[k] }))}
               >
-                {k}
+                {SEVERITY_LABELS[k] || k}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <label className="ops-wire-label">Wire</label>
+      <label className="ops-wire-label">Recent activity</label>
       <ul className="wire ops-wire">
         {log.map((line, i) => (
           <li key={`${line}-${i}`}>{line}</li>
