@@ -4,13 +4,38 @@ GSOC watch floor: 3D globe, animated hazards, asset and Deutsche Bank HQ proximi
 
 This repository contains the standalone ATOM-CORVEX frontend.
 
-## Run in Cursor
+## Run in Cursor (VS Code-style layout)
 
-1. Clone or pull the `main` branch.
-2. **File → Open Folder** and choose the cloned `frontend-atom-corvex` folder.
-3. In the terminal:
+### Option A — Workspace file (recommended)
 
-From the repository root:
+1. Clone the repo and checkout the feature branch:
+   ```bash
+   git clone https://github.com/gurupriya4395/frontend-atom-corvex.git
+   cd frontend-atom-corvex
+   git checkout cursor/globe-pins-light-bg-a1f5
+   npm install
+   ```
+2. In Cursor Desktop: **File → Open Workspace from File…**
+3. Select `atom-corvex.code-workspace` in the repo root.
+4. You get the familiar layout: **Explorer on the left**, full files in the editor, tabs on top.
+5. Start the app:
+   - **Terminal → Run Task → dev**, or
+   - `npm run dev`
+6. Open http://localhost:5173
+
+### Option B — Open folder
+
+1. **File → Open Folder…** and choose the repo.
+2. **View → Explorer** (`Cmd+Shift+E` / `Ctrl+Shift+E`) for the file tree on the left.
+3. `npm install && npm run dev`
+
+### Review changes vs main
+
+- **Source Control** panel → view diffs side-by-side
+- Or: `git diff main`
+- PR: https://github.com/gurupriya4395/frontend-atom-corvex/pull/2
+
+## Run (quick)
 
 ```bash
 npm install
