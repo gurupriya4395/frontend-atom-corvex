@@ -139,7 +139,7 @@ function renderChrome(d) {
   }
   $('#ops-clock').textContent = clock(Date.now())
 
-  document.querySelectorAll('.workspace-nav button').forEach((btn) => {
+  document.querySelectorAll('.menu-nav button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.workspace === state.workspace)
   })
   document.querySelectorAll('.monitor-windows button').forEach((btn) => {
@@ -154,10 +154,9 @@ function renderChrome(d) {
     note.textContent = text
     note.hidden = !text
   }
-  $('#monitor-bar').hidden = state.workspace !== 'monitor'
-  if ($('#view-badge')) {
-    $('#view-badge').textContent = state.workspace === 'monitor' ? 'Monitor' : (WORKSPACE_LABELS[state.workspace] || '').split('—')[0].trim()
-  }
+  const monitorBar = $('#monitor-bar')
+  if (monitorBar) monitorBar.hidden = state.workspace !== 'monitor'
+  if ($('#view-badge')) $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
 
   const stats = {
     total: state.timeMode === 'forecast' ? d.indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length : d.indiaPool.filter((e) => !isForecastEvent(e)).length,
@@ -416,7 +415,7 @@ export function initApp() {
     deskMap.boot()
     render()
   }
-  document.querySelectorAll('.workspace-nav button').forEach((btn) => {
+  document.querySelectorAll('.menu-nav button').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.workspace = btn.dataset.workspace
       render()

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5180 --strictPort",
+    "dev": "vite",
     "dev:html": "vite --config html-app/vite.config.js",
     "dev:react": "vite",
     "build:html": "vite build --config html-app/vite.config.js",

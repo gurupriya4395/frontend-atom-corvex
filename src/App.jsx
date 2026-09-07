@@ -325,55 +325,56 @@ export default function App() {
         </div>
       )}
 
-      <header className="workspace-header">
-        <div className="workspace-primary">
-          <div className="brand">
-            <span className="brand-mark">ATOM CORVEX</span>
-            <span className="ops-mode-badge">{workspace === 'monitor' ? 'Monitor' : workspace}</span>
-          </div>
-          <nav className="workspace-nav" aria-label="Workspace">
-            {[
-              ['command', 'Command Center'],
-              ['monitor', 'Monitor'],
-              ['assets', 'Assets'],
-              ['response', 'Response'],
-              ['insights', 'Insights'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={workspace === id ? 'active' : ''}
-                onClick={() => setWorkspace(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-          <div className="top-right">
-            <span className="ops-live-pill">
-              <span className="live-dot" />
-              Live
-            </span>
-            <button className="ghost run-desk" type="button" onClick={runDesk}>
-              Demo
-            </button>
-            <input
-              ref={searchRef}
-              className="search ops-search"
-              placeholder="Search city, HQ, flood…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
-              }}
-            />
-            <span className="stamp ops-clock">{clock(now.getTime())}</span>
-          </div>
+      <header className="topbar ops-topbar">
+        <div className="brand">
+          <span className="brand-mark">Atom Corvex</span>
+          <span className="ops-mode-badge">{VIEW_LABELS[mapMode] || VIEW_LABELS.globe}</span>
         </div>
+        <nav className="menu-nav" aria-label="Workspace">
+          {[
+            ['command', 'Command Center'],
+            ['monitor', 'Monitor'],
+            ['assets', 'Assets'],
+            ['response', 'Response'],
+            ['insights', 'Insights'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={workspace === id ? 'active' : ''}
+              onClick={() => setWorkspace(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="top-right">
+          <span className="ops-live-pill">
+            <span className="live-dot" />
+            Live
+          </span>
+          <button className="ghost run-desk" type="button" onClick={runDesk}>
+            Demo
+          </button>
+          <input
+            ref={searchRef}
+            className="search ops-search"
+            placeholder="Search city, HQ, flood…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
+            }}
+          />
+          <span className="stamp ops-clock">{clock(now.getTime())}</span>
+        </div>
+      </header>
+
+      <div className="ops-chrome-stack">
         {workspace === 'monitor' && (
-          <div className="monitor-bar">
-            <span className="monitor-bar-label">Monitor</span>
-            <div className="monitor-windows" role="tablist" aria-label="Monitor window">
+          <div className="menu-subnav">
+            <span className="menu-subnav-label">Monitor</span>
+            <div className="menu-subnav-group">
               {[
                 ['live', 'Live'],
                 ['upcoming', 'Upcoming'],
@@ -395,7 +396,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <div className="monitor-present" role="group" aria-label="Presentation">
+            <div className="menu-subnav-group">
               {['map', 'list', 'split'].map((id) => (
                 <button
                   key={id}
@@ -409,27 +410,6 @@ export default function App() {
             </div>
           </div>
         )}
-        <div className="topbar-coords-panel" aria-live="polite">
-          {focusPoint ? (
-            <>
-              <span className="topbar-coords-label">{focusPoint.label}</span>
-              <span className="topbar-coords-val">
-                <em>Lat</em> {fmtLat(focusPoint.lat)}
-              </span>
-              <span className="topbar-coords-val">
-                <em>Long</em> {fmtLng(focusPoint.lng)}
-              </span>
-            </>
-          ) : (
-            <span className="topbar-coords-hint">Select an event or site to see coordinates</span>
-          )}
-        </div>
-      </header>
-      {workspace !== 'monitor' && WORKSPACE_LABELS[workspace] ? (
-        <div className="workspace-placeholder">{WORKSPACE_LABELS[workspace]}</div>
-      ) : null}
-
-      <div className="ops-chrome-stack">
         <AlertsSummaryStrip
           stats={alertStats}
           activeFilter={stripFilter}
