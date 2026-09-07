@@ -4,18 +4,22 @@ GSOC watch floor: 3D globe, animated hazards, asset and Deutsche Bank HQ proximi
 
 This repository contains the standalone ATOM-CORVEX frontend.
 
-## HTML/CSS/JS app (no React)
+## HTML/CSS/JS app (no React, no build)
 
-Full operations desk in plain **HTML, CSS, and JavaScript** — same UI and behavior as the React app.
+Full operations desk in plain **HTML, CSS, and JavaScript** in **`html-app/`**.
+
+**Open only the HTML folder in VS Code:** open `html-app/atom-corvex-html.code-workspace`
 
 ```bash
-npm install
-npm run dev:html
+cd html-app
+npx --yes serve .
 ```
 
-Open http://localhost:5174 (see terminal if Vite picks another port).
+No `npm install` required — Three.js and MapLibre load from CDN.
 
-See **`html-app/README.md`** for structure and shortcuts.
+See **`html-app/README.md`** for details.
+
+Optional (uses repo `node_modules`): `npm run dev:html` from repo root.
 
 ## HTML prototype (layout sandbox)
 

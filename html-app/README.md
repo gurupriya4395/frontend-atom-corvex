@@ -1,39 +1,39 @@
-# Atom Corvex — HTML/CSS/JS
+# Atom Corvex — HTML only
 
-Plain **HTML, CSS, and JavaScript** version of the Atom Corvex operations desk. Same UI and behavior as the React app in `src/`, without React.
+Plain **HTML, CSS, and JavaScript** — no React, no build step. Same UI and behavior as the React app.
+
+## Open in VS Code / Cursor
+
+1. **File → Open Workspace from File…**
+2. Select **`atom-corvex-html.code-workspace`** in this folder
+
+You will only see `html-app` files (not the React `src/` folder).
 
 ## Run
 
-From the repo root (uses shared `node_modules` for Three.js and MapLibre):
+Use any static file server (required for ES modules):
 
 ```bash
-npm install
-npm run dev:html
+cd html-app
+npx --yes serve .
 ```
 
-Open http://localhost:5174
+Open the URL shown (usually http://localhost:3000).
 
-## Structure
+**VS Code:** install the **Live Server** extension → right-click `index.html` → **Open with Live Server**.
+
+## Files
 
 | Path | Purpose |
 |------|---------|
-| `index.html` | Full UI shell (topbar, rails, feed, globe/map stages) |
-| `css/app.css` | Main layout and ops theme |
-| `css/markers.css` | TAK-style marker symbology |
-| `js/main.js` | Entry point |
-| `js/app.js` | State, filters, rendering, demo sequence |
-| `js/globe.js` | Three.js globe |
-| `js/map.js` | MapLibre satellite map |
-| `js/data.js` | Sample events and assets |
-| `js/scoring.js` | Enrichment and search |
-| `js/markers.js` | Marker HTML builders |
+| `index.html` | UI shell + CDN links for Three.js & MapLibre |
+| `css/` | Layout and ops theme |
+| `js/` | App logic, globe, map, data |
 
-## Keyboard shortcuts
+Three.js and MapLibre load from CDN — no `npm install` needed in this folder.
+
+## Shortcuts
 
 - `/` — focus search
-- `R` — run demo sequence
-- `Escape` — clear selection and scene cues
-
-## React version
-
-The original React app still runs with `npm run dev` on port 5173.
+- `R` — run demo
+- `Escape` — clear selection
