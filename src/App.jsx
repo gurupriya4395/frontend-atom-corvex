@@ -8,9 +8,10 @@ import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './da
 import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import { fmtLat, fmtLng } from './coords'
-import { VIEW_LABELS, TIME_WINDOW_LABELS } from './labels'
+import { VIEW_LABELS, TIME_WINDOW_LABELS, WORKSPACE_LABELS } from './labels'
 import './index.css'
 import './markers.css'
+import './nav.css'
 
 const GlobeMap = lazy(() => import('./GlobeMap'))
 
@@ -35,6 +36,9 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [stripFilter, setStripFilter] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
+  const [workspace, setWorkspace] = useState('monitor')
+  const [monitorWindow, setMonitorWindow] = useState('live')
+  const [presentation, setPresentation] = useState('map')
   const [scene, setScene] = useState({
     pulse: false,
     flood: false,
@@ -106,6 +110,7 @@ export default function App() {
 
   const timed = enriched.filter((e) => {
     if (timeMode === 'forecast') return isForecastEvent(e) && inNextTwoDays(e)
+    if (timeMode === 'history') return !isForecastEvent(e)
     return !isForecastEvent(e)
   })
 
@@ -320,11 +325,90 @@ export default function App() {
         </div>
       )}
 
-      <header className="topbar ops-topbar">
-        <div className="brand">
-          <span className="brand-mark">Atom Corvex</span>
-          <span className="ops-mode-badge">{VIEW_LABELS[mapMode] || VIEW_LABELS.globe}</span>
+      <header className="workspace-header">
+        <div className="workspace-primary">
+          <div className="brand">
+            <span className="brand-mark">ATOM CORVEX</span>
+            <span className="ops-mode-badge">{workspace === 'monitor' ? 'Monitor' : workspace}</span>
+          </div>
+          <nav className="workspace-nav" aria-label="Workspace">
+            {[
+              ['command', 'Command Center'],
+              ['monitor', 'Monitor'],
+              ['assets', 'Assets'],
+              ['response', 'Response'],
+              ['insights', 'Insights'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={workspace === id ? 'active' : ''}
+                onClick={() => setWorkspace(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="top-right">
+            <span className="ops-live-pill">
+              <span className="live-dot" />
+              Live
+            </span>
+            <button className="ghost run-desk" type="button" onClick={runDesk}>
+              Demo
+            </button>
+            <input
+              ref={searchRef}
+              className="search ops-search"
+              placeholder="Search city, HQ, flood…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
+              }}
+            />
+            <span className="stamp ops-clock">{clock(now.getTime())}</span>
+          </div>
         </div>
+        {workspace === 'monitor' && (
+          <div className="monitor-bar">
+            <span className="monitor-bar-label">Monitor</span>
+            <div className="monitor-windows" role="tablist" aria-label="Monitor window">
+              {[
+                ['live', 'Live'],
+                ['upcoming', 'Upcoming'],
+                ['history', 'History'],
+                ['saved', 'Saved Views'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={monitorWindow === id ? 'active' : ''}
+                  onClick={() => {
+                    setMonitorWindow(id)
+                    if (id === 'live') setTimeMode('live')
+                    if (id === 'upcoming') setTimeMode('forecast')
+                    if (id === 'history') setTimeMode('history')
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="monitor-present" role="group" aria-label="Presentation">
+              {['map', 'list', 'split'].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={presentation === id ? 'active' : ''}
+                  onClick={() => setPresentation(id)}
+                >
+                  {id === 'map' ? 'Map' : id === 'list' ? 'List' : 'Split'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="topbar-coords-panel" aria-live="polite">
           {focusPoint ? (
             <>
@@ -340,27 +424,10 @@ export default function App() {
             <span className="topbar-coords-hint">Select an event or site to see coordinates</span>
           )}
         </div>
-        <div className="top-right">
-          <span className="ops-live-pill">
-            <span className="live-dot" />
-            Live
-          </span>
-          <button className="ghost run-desk" type="button" onClick={runDesk}>
-            Demo
-          </button>
-          <input
-            ref={searchRef}
-            className="search ops-search"
-            placeholder="Search city, HQ, flood…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
-            }}
-          />
-          <span className="stamp ops-clock">{clock(now.getTime())}</span>
-        </div>
       </header>
+      {workspace !== 'monitor' && WORKSPACE_LABELS[workspace] ? (
+        <div className="workspace-placeholder">{WORKSPACE_LABELS[workspace]}</div>
+      ) : null}
 
       <div className="ops-chrome-stack">
         <AlertsSummaryStrip

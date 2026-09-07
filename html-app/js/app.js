@@ -131,7 +131,6 @@ function clearSelection() {
 }
 
 function renderChrome(d) {
-  $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
   const coords = $('#topbar-coords')
   if (d.focusPoint) {
     coords.innerHTML = `<span class="topbar-coords-label">${d.focusPoint.label}</span><span class="topbar-coords-val"><em>Lat</em> ${fmtLat(d.focusPoint.lat)}</span><span class="topbar-coords-val"><em>Long</em> ${fmtLng(d.focusPoint.lng)}</span>`
