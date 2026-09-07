@@ -133,27 +133,6 @@ function renderChrome(d) {
   }
   $('#ops-clock').textContent = clock(Date.now())
 
-  const footer = $('#desk-footer')
-  if (footer) {
-    $('#footer-latency').textContent = `${state.latencyMs} ms`
-    $('#footer-tracks').textContent = d.filtered.length
-    $('#footer-sites').textContent = d.indiaPool.filter((e) => e.linked).length
-    $('#footer-sync').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false })
-    if (d.focusPoint) {
-      $('#footer-coords').innerHTML = `LATITUDE <strong>${fmtLat(d.focusPoint.lat)}</strong> LONGITUDE <strong>${fmtLng(d.focusPoint.lng)}</strong>`
-    } else {
-      $('#footer-coords').textContent = 'Select a pin for coordinates'
-    }
-  }
-
-  document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.mode === state.timeMode)
-  })
-  document.querySelectorAll('.view-cluster button[data-view]').forEach((btn) => {
-    const on = btn.dataset.view === (state.mapMode === 'map' ? 'map' : 'globe')
-    btn.classList.toggle('active', on)
-  })
-
   const stats = {
     total: state.timeMode === 'forecast' ? d.indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length : d.indiaPool.filter((e) => !isForecastEvent(e)).length,
     nearSites: d.indiaPool.filter((e) => e.linked).length,
@@ -189,7 +168,7 @@ function renderChrome(d) {
     const pct = Math.min(100, (raw / 3) * 100)
     const asset = d.selectedEvent.primary?.asset
     risk.className = 'risk-row'
-    risk.innerHTML = `<span class="risk-row-tag">Risk score</span><div class="risk-score-main"><strong>${raw.toFixed(2)}</strong><span>of 3</span></div><div class="risk-bar"><i style="width:${pct}%"></i></div><div class="risk-factors"><span class="risk-chip impact-${d.selectedEvent.impact || 'low'}">${d.selectedEvent.impact || 'low'} impact</span>${asset ? `<span class="risk-chip">${d.selectedEvent.primary.km.toFixed(1)} km · ${asset.name}</span>` : ''}${d.selectedEvent.alert ? '<span class="risk-chip alert">Needs attention</span>' : ''}</div>`
+    risk.innerHTML = `<span class="risk-row-tag">Risk score</span><div class="risk-score-main"><strong>${raw.toFixed(2)}</strong><span>of 3</span></div><div class="risk-bar"><i style="width:${pct}%"></i></div><div class="risk-factors"><span class="risk-chip impact-${d.selectedEvent.impact || 'low'}">${{ high: 'High impact', medium: 'Medium impact', low: 'Low impact' }[d.selectedEvent.impact] || 'Low impact'}</span>${asset ? `<span class="risk-chip">${d.selectedEvent.primary.km.toFixed(1)} km · ${asset.name}</span>` : ''}${d.selectedEvent.alert ? '<span class="risk-chip alert">Needs attention</span>' : ''}</div>`
   } else {
     const linked = d.indiaPool.filter((e) => e.linked)
     const maxRaw = linked.reduce((m, e) => Math.max(m, e.raw || 0), 0)
@@ -244,11 +223,11 @@ function renderFeed(d) {
     return
   }
   $('#event-cards').innerHTML = d.filtered
-    .map((ev) => {
+    .map((ev, i) => {
       const forecast = isForecastEvent(ev)
       const when = clock(ev.eventAt || ev.publishedAt)
       const assetName = ev.primary?.asset?.name
-      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${forecast ? 'forecast' : 'ok'}">${forecast ? 'forecast' : 'live'}</span><span class="chip ${ev.severity}">${ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3><p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">Asset affected · ${assetName}</p>` : ''}<p class="card-date">${when}</p></span></button>`
+      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${forecast ? 'forecast' : 'ok'}">${forecast ? 'forecast' : 'live'}</span><span class="chip ${ev.severity}">${ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3><p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">Asset affected · ${assetName}</p>` : ''}<p class="card-date">${when}</p></span></button>`
     })
     .join('')
   $('#event-cards').querySelectorAll('.card').forEach((btn) => {
@@ -411,22 +390,6 @@ export function initApp() {
     deskMap.boot()
     render()
   }
-  $('#btn-toolbar-map')?.addEventListener('click', () => {
-    state.mapMode = 'map'
-    deskMap.boot()
-    render()
-  })
-  $('#btn-toolbar-globe')?.addEventListener('click', () => {
-    state.mapMode = 'globe'
-    render()
-  })
-  document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return
-      state.timeMode = btn.dataset.mode
-      render()
-    })
-  })
   $('#btn-zoom-globe').onclick = () => {
     clearSelection()
     globe?.zoomOut()

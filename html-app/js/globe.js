@@ -55,6 +55,7 @@ export function createGlobe(hostEl, getOnSelect) {
     'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
     (remote) => {
       remote.colorSpace = THREE.SRGBColorSpace
+      remote.anisotropy = 8
       globeMat.map = remote
       globeMat.needsUpdate = true
     },
@@ -277,9 +278,63 @@ function paintLightEarth() {
   ocean.addColorStop(1, '#5a96bc')
   g.fillStyle = ocean
   g.fillRect(0, 0, w, h)
+  const land = [
+    [420, 360, 200, 110, '#c4b48a'],
+    [980, 320, 240, 130, '#b8a078'],
+    [1480, 300, 220, 100, '#c9b896'],
+    [560, 620, 120, 150, '#a8c090'],
+    [1180, 580, 180, 120, '#b0a070'],
+    [1680, 520, 160, 90, '#9aab72'],
+    [300, 480, 90, 70, '#b8a078'],
+    [820, 440, 70, 55, '#c4b48a'],
+    [640, 280, 55, 40, '#8faa6e'],
+    [1320, 420, 80, 50, '#a69068'],
+  ]
+  for (const [x, y, rx, ry, base] of land) {
+    const shade = g.createRadialGradient(x - rx * 0.25, y - ry * 0.3, rx * 0.08, x, y, rx * 1.15)
+    shade.addColorStop(0, lighten(base, 28))
+    shade.addColorStop(0.45, base)
+    shade.addColorStop(0.82, darken(base, 22))
+    shade.addColorStop(1, darken(base, 38))
+    g.fillStyle = shade
+    g.beginPath()
+    g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
+    g.fill()
+    g.strokeStyle = darken(base, 45)
+    g.lineWidth = 3
+    g.stroke()
+  }
+  for (let i = 0; i < 48; i++) {
+    const x = Math.random() * w
+    const y = Math.random() * h
+    const r = 24 + Math.random() * 70
+    const dent = g.createRadialGradient(x, y, 0, x, y, r)
+    dent.addColorStop(0, 'rgba(42, 58, 72, 0.14)')
+    dent.addColorStop(1, 'rgba(42, 58, 72, 0)')
+    g.fillStyle = dent
+    g.beginPath()
+    g.arc(x, y, r, 0, Math.PI * 2)
+    g.fill()
+  }
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
+}
+
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.min(255, ((n >> 16) & 255) + amt)
+  const g = Math.min(255, ((n >> 8) & 255) + amt)
+  const b = Math.min(255, (n & 255) + amt)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+function darken(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.max(0, ((n >> 16) & 255) - amt)
+  const g = Math.max(0, ((n >> 8) & 255) - amt)
+  const b = Math.max(0, (n & 255) - amt)
+  return `rgb(${r}, ${g}, ${b})`
 }
 
 function colorFor(e) {
