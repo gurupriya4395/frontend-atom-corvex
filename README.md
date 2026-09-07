@@ -4,6 +4,17 @@ GSOC watch floor: 3D globe, animated hazards, asset and Deutsche Bank HQ proximi
 
 This repository contains the standalone ATOM-CORVEX frontend.
 
+## HTML prototype (safe sandbox)
+
+Static HTML/CSS/JS lives in **`html-prototype/`** — edit layout and styles there without changing the React app in `src/`.
+
+```bash
+cd html-prototype
+npx --yes serve .
+```
+
+See `html-prototype/README.md` for details.
+
 ## Run in Cursor (VS Code-style layout)
 
 ### Option A — Workspace file (recommended)
