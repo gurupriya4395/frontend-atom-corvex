@@ -2,35 +2,47 @@
 
 GSOC watch floor: 3D globe, animated hazards, asset and Deutsche Bank HQ proximity, explainable impact score.
 
-This repository contains the standalone ATOM-CORVEX frontend.
+## Run the HTML app (same UI as localhost:5173)
 
-## HTML/CSS/JS app (no React, no build)
-
-Full operations desk in plain **HTML, CSS, and JavaScript** in **`html-app/`**.
-
-**Open only the HTML folder in VS Code:** open `html-app/atom-corvex-html.code-workspace`
+The default app is now **plain HTML/CSS/JS** in `html-app/`. It matches the React operations desk (dark top bar, summary, globe, filters, proximity feed).
 
 ```bash
-cd html-app
-npx --yes serve .
+git fetch origin
+git checkout cursor/globe-pins-light-bg-a1f5
+git pull origin cursor/globe-pins-light-bg-a1f5
+npm install
+npm run dev
 ```
 
-No `npm install` required — Three.js and MapLibre load from CDN.
+Open **http://localhost:5173**
 
-See **`html-app/README.md`** for details.
+If Git says branches diverged:
 
-Optional (uses repo `node_modules`): `npm run dev:html` from repo root.
+```bash
+git reset --hard origin/cursor/globe-pins-light-bg-a1f5
+npm run dev
+```
+
+Stop any old server first (`Ctrl+C`), then start `npm run dev` again.
+
+## Open HTML files in VS Code
+
+**File → Open Workspace from File…** → `html-app/atom-corvex-html.code-workspace`
+
+## React version (optional)
+
+```bash
+npm run dev:react
+```
 
 ## HTML prototype (layout sandbox)
 
-Static mock UI in **`html-prototype/`** — for quick layout experiments only.
+Static mock UI in **`html-prototype/`** — not the full app.
 
 ```bash
 cd html-prototype
 npx --yes serve .
 ```
-
-See `html-prototype/README.md` for details.
 
 ## Run in Cursor (VS Code-style layout)
 

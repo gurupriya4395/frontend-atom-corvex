@@ -1,39 +1,16 @@
-# Atom Corvex — HTML only
+# Atom Corvex — HTML (matches localhost:5173)
 
-Plain **HTML, CSS, and JavaScript** — no React, no build step. Same UI and behavior as the React app.
+This folder is the **same UI** as the React app on http://localhost:5173
+(dark ops top bar, summary strip, globe, filters, proximity feed).
 
-## Open in VS Code / Cursor
-
-1. **File → Open Workspace from File…**
-2. Select **`atom-corvex-html.code-workspace`** in this folder
-
-You will only see `html-app` files (not the React `src/` folder).
-
-## Run
-
-Use any static file server (required for ES modules):
+## Run (from repo root)
 
 ```bash
-cd html-app
-npx --yes serve .
+git pull origin cursor/globe-pins-light-bg-a1f5
+npm install
+npm run dev
 ```
 
-Open the URL shown (usually http://localhost:3000).
+Open **http://localhost:5173**
 
-**VS Code:** install the **Live Server** extension → right-click `index.html` → **Open with Live Server**.
-
-## Files
-
-| Path | Purpose |
-|------|---------|
-| `index.html` | UI shell + CDN links for Three.js & MapLibre |
-| `css/` | Layout and ops theme |
-| `js/` | App logic, globe, map, data |
-
-Three.js and MapLibre load from CDN — no `npm install` needed in this folder.
-
-## Shortcuts
-
-- `/` — focus search
-- `R` — run demo
-- `Escape` — clear selection
+Do not open `html-prototype/` — that is an old mock, not this app.
