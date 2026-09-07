@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/layout-light.css" />
     <link rel="stylesheet" href="css/markers.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/dist/maplibre-gl.css" />
     <script type="importmap">
@@ -24,7 +25,7 @@
     </script>
   </head>
   <body>
-    <div class="app">
+    <div class="app layout-mission">
       <div id="boot" class="boot">
         <div class="boot-inner">
           <span class="boot-tag">Demo</span>
@@ -40,30 +41,54 @@
         </div>
       </div>
 
-      <header class="topbar ops-topbar">
-        <div class="brand">
-          <span class="brand-mark">Atom Corvex</span>
-          <span id="view-badge" class="ops-mode-badge">Globe view</span>
+      <div class="class-ribbon">UNCLASSIFIED // DEMONSTRATION DATA</div>
+
+      <header class="mission-header">
+        <div class="main-nav">
+          <div class="brand">
+            <span class="brand-mark">Atom Corvex</span>
+            <span id="view-badge" class="ops-mode-badge">Globe view</span>
+          </div>
+          <nav class="nav-tabs" aria-label="Main navigation">
+            <button type="button" class="active">Critical Events</button>
+            <button type="button">Monitoring</button>
+            <button type="button">Watchlist</button>
+            <button type="button">Alerts</button>
+            <button type="button">Data Analytics</button>
+            <button type="button">Risk Reports</button>
+          </nav>
+          <div class="nav-right">
+            <input id="search" class="search ops-search toolbar-search" placeholder="Search city, HQ, flood…" />
+            <button id="btn-demo" class="ghost run-desk" type="button">Demo</button>
+            <span id="ops-clock" class="stamp ops-clock"></span>
+          </div>
         </div>
-        <div id="topbar-coords" class="topbar-coords-panel" aria-live="polite">
-          <span class="topbar-coords-hint">Select an event or site to see coordinates</span>
-        </div>
-        <div class="top-right">
-          <span class="ops-live-pill"><span class="live-dot"></span> Live</span>
-          <button id="btn-demo" class="ghost run-desk" type="button">Demo</button>
-          <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
-          <span id="ops-clock" class="stamp ops-clock"></span>
+
+        <div class="desk-toolbar">
+          <div class="toolbar-group mode-cluster" role="group" aria-label="Time mode">
+            <button type="button" data-mode="live" class="active">LIVE</button>
+            <button type="button" data-mode="forecast">FORECAST</button>
+            <button type="button" disabled>HISTORICAL</button>
+          </div>
+          <div class="toolbar-group view-cluster" role="group" aria-label="View mode">
+            <button type="button" id="btn-toolbar-globe" data-view="globe" class="active">GLOBE</button>
+            <button type="button" id="btn-toolbar-map" data-view="map">MAP</button>
+            <button type="button" disabled>LIST</button>
+            <button type="button" disabled>SNAPSHOTS</button>
+          </div>
+          <div class="alerts-strip" role="region" aria-label="Alert summary">
+            <div class="alerts-strip-head">
+              <span class="alerts-strip-title">Summary</span>
+              <span id="alert-strip-window" class="alerts-strip-window">Live now</span>
+            </div>
+            <div id="alert-cells" class="alerts-strip-body"></div>
+          </div>
         </div>
       </header>
 
+      <div id="topbar-coords" hidden></div>
+
       <div class="ops-chrome-stack">
-        <div class="alerts-strip" role="region" aria-label="Alert summary">
-          <div class="alerts-strip-head">
-            <span class="alerts-strip-title">Summary</span>
-            <span id="alert-strip-window" class="alerts-strip-window">Live now</span>
-          </div>
-          <div id="alert-cells" class="alerts-strip-body"></div>
-        </div>
         <div class="ops-meta-row">
           <div id="coord-strip" class="coord-strip">
             <span class="coord-strip-empty">Select an event or site to view coordinates</span>
@@ -216,6 +241,24 @@
           </div>
         </div>
       </div>
+
+      <footer id="desk-footer" class="desk-footer" aria-live="polite">
+        <span class="ok">LINK GOOD</span>
+        <span class="sep"></span>
+        <span>LATENCY <strong id="footer-latency">—</strong></span>
+        <span class="sep"></span>
+        <span>TRACKS <strong id="footer-tracks">—</strong></span>
+        <span class="sep"></span>
+        <span>SITES <strong id="footer-sites">—</strong></span>
+        <span class="sep"></span>
+        <span id="footer-coords">Select a pin for coordinates</span>
+        <span class="sep"></span>
+        <span>WINDOW <strong id="footer-window">Live now</strong></span>
+        <span class="sep"></span>
+        <span>VIEW <strong id="footer-view">Globe view</strong></span>
+        <span class="sep"></span>
+        <span>SYNC <strong id="footer-sync">—</strong></span>
+      </footer>
     </div>
 
     <script type="module" src="js/main.js"></script>

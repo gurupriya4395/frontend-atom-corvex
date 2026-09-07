@@ -133,6 +133,29 @@ function renderChrome(d) {
   }
   $('#ops-clock').textContent = clock(Date.now())
 
+  const footer = $('#desk-footer')
+  if (footer) {
+    const latEl = $('#footer-latency')
+    if (latEl) latEl.textContent = `${state.latencyMs} ms`
+    $('#footer-tracks').textContent = d.filtered.length
+    $('#footer-sites').textContent = String(INDIA_ASSETS?.length || 5)
+    $('#footer-sync').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false }) + 'Z'
+    $('#footer-window').textContent = TIME_WINDOW_LABELS[state.timeMode] || 'Live now'
+    $('#footer-view').textContent = VIEW_LABELS[state.mapMode] || 'Globe view'
+    if (d.focusPoint) {
+      $('#footer-coords').innerHTML = `LATITUDE <strong>${fmtLat(d.focusPoint.lat)}</strong> LONGITUDE <strong>${fmtLng(d.focusPoint.lng)}</strong>`
+    } else {
+      $('#footer-coords').textContent = 'Select a pin for coordinates'
+    }
+  }
+
+  document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === state.timeMode)
+  })
+  document.querySelectorAll('.view-cluster button[data-view]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === (state.mapMode === 'map' ? 'map' : 'globe'))
+  })
+
   const stats = {
     total: state.timeMode === 'forecast' ? d.indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length : d.indiaPool.filter((e) => !isForecastEvent(e)).length,
     nearSites: d.indiaPool.filter((e) => e.linked).length,
@@ -390,6 +413,24 @@ export function initApp() {
     deskMap.boot()
     render()
   }
+  const setMap = () => {
+    state.mapMode = 'map'
+    deskMap.boot()
+    render()
+  }
+  const setGlobe = () => {
+    state.mapMode = 'globe'
+    render()
+  }
+  $('#btn-toolbar-map')?.addEventListener('click', setMap)
+  $('#btn-toolbar-globe')?.addEventListener('click', setGlobe)
+  document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return
+      state.timeMode = btn.dataset.mode
+      render()
+    })
+  })
   $('#btn-zoom-globe').onclick = () => {
     clearSelection()
     globe?.zoomOut()
