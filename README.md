@@ -4,9 +4,22 @@ GSOC watch floor: 3D globe, animated hazards, asset and Deutsche Bank HQ proximi
 
 This repository contains the standalone ATOM-CORVEX frontend.
 
-## HTML prototype (safe sandbox)
+## HTML/CSS/JS app (no React)
 
-Static HTML/CSS/JS lives in **`html-prototype/`** — edit layout and styles there without changing the React app in `src/`.
+Full operations desk in plain **HTML, CSS, and JavaScript** — same UI and behavior as the React app.
+
+```bash
+npm install
+npm run dev:html
+```
+
+Open http://localhost:5174 (see terminal if Vite picks another port).
+
+See **`html-app/README.md`** for structure and shortcuts.
+
+## HTML prototype (layout sandbox)
+
+Static mock UI in **`html-prototype/`** — for quick layout experiments only.
 
 ```bash
 cd html-prototype
