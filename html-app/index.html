@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/nav.css" />
     <link rel="stylesheet" href="css/markers.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/dist/maplibre-gl.css" />
     <script type="importmap">
@@ -40,19 +41,42 @@
         </div>
       </div>
 
-      <header class="topbar ops-topbar">
-        <div class="brand">
-          <span class="brand-mark">Atom Corvex</span>
-          <span id="view-badge" class="ops-mode-badge">Globe view</span>
+      <header class="workspace-header">
+        <div class="workspace-primary">
+          <div class="brand">
+            <span class="brand-mark">ATOM CORVEX</span>
+            <span id="view-badge" class="ops-mode-badge">Monitor</span>
+          </div>
+          <nav class="workspace-nav" aria-label="Workspace">
+            <button type="button" data-workspace="command">Command Center</button>
+            <button type="button" data-workspace="monitor" class="active">Monitor</button>
+            <button type="button" data-workspace="assets">Assets</button>
+            <button type="button" data-workspace="response">Response</button>
+            <button type="button" data-workspace="insights">Insights</button>
+          </nav>
+          <div class="top-right">
+            <span class="ops-live-pill"><span class="live-dot"></span> Live</span>
+            <button id="btn-demo" class="ghost run-desk" type="button">Demo</button>
+            <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
+            <span id="ops-clock" class="stamp ops-clock"></span>
+          </div>
+        </div>
+        <div class="monitor-bar" id="monitor-bar">
+          <span class="monitor-bar-label">Monitor</span>
+          <div class="monitor-windows" role="tablist" aria-label="Monitor window">
+            <button type="button" data-window="live" class="active">Live</button>
+            <button type="button" data-window="upcoming">Upcoming</button>
+            <button type="button" data-window="history">History</button>
+            <button type="button" data-window="saved">Saved Views</button>
+          </div>
+          <div class="monitor-present" role="group" aria-label="Presentation">
+            <button type="button" data-present="map" class="active">Map</button>
+            <button type="button" data-present="list">List</button>
+            <button type="button" data-present="split">Split</button>
+          </div>
         </div>
         <div id="topbar-coords" class="topbar-coords-panel" aria-live="polite">
           <span class="topbar-coords-hint">Select an event or site to see coordinates</span>
-        </div>
-        <div class="top-right">
-          <span class="ops-live-pill"><span class="live-dot"></span> Live</span>
-          <button id="btn-demo" class="ghost run-desk" type="button">Demo</button>
-          <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
-          <span id="ops-clock" class="stamp ops-clock"></span>
         </div>
       </header>
 
@@ -71,6 +95,8 @@
           <div id="risk-row" class="risk-row desk"></div>
         </div>
       </div>
+
+      <div id="workspace-note" class="workspace-placeholder" hidden></div>
 
       <div class="ops">
         <div id="map-wrap" class="map-wrap is-satellite">

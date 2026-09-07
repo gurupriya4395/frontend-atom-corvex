@@ -2,7 +2,7 @@ import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './da
 import { DESK_BEATS } from './sequence.js'
 import { enrich, clock, searchHay } from './scoring.js'
 import { fmtLat, fmtLng, fmtPair } from './coords.js'
-import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS } from './labels.js'
+import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS, WORKSPACE_LABELS } from './labels.js'
 import { eventMarkerHtml } from './markers.js'
 import { createGlobe } from './globe.js'
 import { DeskMap } from './map.js'
@@ -28,6 +28,9 @@ const inNextTwoDays = (e) => {
 const state = {
   raw: [...EVENTS],
   timeMode: 'live',
+  workspace: 'monitor',
+  monitorWindow: 'live',
+  presentation: 'map',
   q: '',
   cats: { geopolitical: true, environmental: true, security: true },
   sevs: { high: true, medium: true, low: true },
@@ -56,7 +59,11 @@ function enriched() {
 
 function derive() {
   const pool = enriched()
-  const timed = pool.filter((e) => (state.timeMode === 'forecast' ? isForecastEvent(e) && inNextTwoDays(e) : !isForecastEvent(e)))
+  const timed = pool.filter((e) => {
+    if (state.timeMode === 'forecast') return isForecastEvent(e) && inNextTwoDays(e)
+    if (state.timeMode === 'history') return !isForecastEvent(e)
+    return !isForecastEvent(e)
+  })
   const needle = state.q.trim().toLowerCase()
   const listed = timed.filter((e) => {
     if (e.flag !== 'IN') return false
@@ -132,6 +139,26 @@ function renderChrome(d) {
     coords.innerHTML = `<span class="topbar-coords-hint">Select an event or site to see coordinates</span>`
   }
   $('#ops-clock').textContent = clock(Date.now())
+
+  document.querySelectorAll('.workspace-nav button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.workspace === state.workspace)
+  })
+  document.querySelectorAll('.monitor-windows button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.window === state.monitorWindow)
+  })
+  document.querySelectorAll('.monitor-present button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.present === state.presentation)
+  })
+  const note = $('#workspace-note')
+  if (note) {
+    const text = WORKSPACE_LABELS[state.workspace] || ''
+    note.textContent = text
+    note.hidden = !text
+  }
+  $('#monitor-bar').hidden = state.workspace !== 'monitor'
+  if ($('#view-badge')) {
+    $('#view-badge').textContent = state.workspace === 'monitor' ? 'Monitor' : (WORKSPACE_LABELS[state.workspace] || '').split('—')[0].trim()
+  }
 
   const stats = {
     total: state.timeMode === 'forecast' ? d.indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length : d.indiaPool.filter((e) => !isForecastEvent(e)).length,
@@ -390,6 +417,31 @@ export function initApp() {
     deskMap.boot()
     render()
   }
+  document.querySelectorAll('.workspace-nav button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.workspace = btn.dataset.workspace
+      render()
+    })
+  })
+  document.querySelectorAll('.monitor-windows button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.monitorWindow = btn.dataset.window
+      if (btn.dataset.window === 'live') state.timeMode = 'live'
+      if (btn.dataset.window === 'upcoming') state.timeMode = 'forecast'
+      if (btn.dataset.window === 'history') state.timeMode = 'history'
+      render()
+    })
+  })
+  document.querySelectorAll('.monitor-present button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.presentation = btn.dataset.present
+      if (btn.dataset.present === 'map') {
+        /* keep current globe/map; no panel layout change */
+      }
+      render()
+    })
+  })
+
   $('#btn-zoom-globe').onclick = () => {
     clearSelection()
     globe?.zoomOut()

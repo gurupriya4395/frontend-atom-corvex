@@ -23,4 +23,13 @@ export const FOCUS_TYPE_LABELS = {
 export const TIME_WINDOW_LABELS = {
   live: 'Live now',
   forecast: 'Next 2 days',
+  history: 'History',
+}
+
+export const WORKSPACE_LABELS = {
+  command: 'Command Center — priority queue (panels unchanged)',
+  monitor: '',
+  assets: 'Assets workspace (panels unchanged)',
+  response: 'Response workspace (panels unchanged)',
+  insights: 'Insights / reports (panels unchanged)',
 }
