@@ -3,11 +3,28 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
 import { eventMarkerHtml, assetMarkerHtml } from './markers'
+import { fmtLat, fmtLng } from './coords'
 
 const R = 100
 
-export default function GlobeMap({ events, assets, selected, onSelect, showRadiusFor, acked, timeMode }) {
-  const [mode, setMode] = useState('globe')
+export default function GlobeMap({
+  events,
+  assets,
+  mapEvents,
+  mapAssets,
+  selected,
+  onSelect,
+  showRadiusFor,
+  timeMode,
+  mapMode = 'globe',
+  onMapMode,
+  scene = {},
+  pulseEventId,
+  highlightAssetId,
+  focusPoint = null,
+}) {
+  const mode = mapMode
+  const setMode = (m) => onMapMode?.(m)
   const [MapView, setMapView] = useState(null)
   const [hud, setHud] = useState({ lat: 20.5, lng: 78.9, alt: 2.4 })
   const [status, setStatus] = useState('booting')
@@ -15,8 +32,8 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
   const worldRef = useRef(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
-  const dataRef = useRef({ events, assets, showRadiusFor, acked })
-  dataRef.current = { events, assets, showRadiusFor, acked }
+  const dataRef = useRef({ events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected })
+  dataRef.current = { events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected }
 
   useEffect(() => {
     const el = hostRef.current
@@ -64,28 +81,52 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
 
   useEffect(() => {
     worldRef.current?.setData(dataRef.current)
-  }, [events, assets, showRadiusFor, acked])
+  }, [events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected])
 
   useEffect(() => {
     const world = worldRef.current
-    if (!world) return
-    if (!selected) {
-      world.setAutoRotate(mode === 'globe')
+    if (!world || mode !== 'globe') return
+    world.setAutoRotate(false)
+    if (pulseEventId && !selected) {
+      const ev = events.find((e) => e.id === pulseEventId)
+      if (ev) world.flyTo(ev.coords[1], ev.coords[0], false)
       return
     }
-    const target = events.find((e) => e.id === selected.id) || assets.find((a) => a.id === selected.id)
+    if (!selected) return
+    const target =
+      selected.type === 'event'
+        ? events.find((e) => e.id === selected.id)
+        : assets.find((a) => a.id === selected.id)
     if (!target) return
     const close = selected.type === 'asset' || Boolean(showRadiusFor)
     world.flyTo(target.coords[1], target.coords[0], close)
-  }, [selected, events, assets, mode, showRadiusFor])
+  }, [selected, events, assets, mode, showRadiusFor, pulseEventId])
 
   useEffect(() => {
-    worldRef.current?.setAutoRotate(mode === 'globe' && !selected)
+    worldRef.current?.setAutoRotate(false)
     worldRef.current?.setPaused(mode !== 'globe')
+    if (mode === 'globe') {
+      requestAnimationFrame(() => {
+        worldRef.current?.resize()
+      })
+      const late = [80, 320].map((ms) =>
+        setTimeout(() => worldRef.current?.resize(), ms),
+      )
+      return () => late.forEach(clearTimeout)
+    }
   }, [mode, selected])
 
+  useEffect(() => {
+    import('./MapView.jsx').then((m) => setMapView(() => m.default))
+  }, [])
+
+  const zoomOutGlobe = () => {
+    onSelectRef.current?.(null)
+    worldRef.current?.zoomOut()
+  }
+
   return (
-    <div className="map-wrap">
+    <div className={`map-wrap ${mode === 'map' ? 'is-imagery' : 'is-satellite'}`}>
       <div className="hud-frame" aria-hidden="true">
         <i className="c tl" />
         <i className="c tr" />
@@ -94,14 +135,18 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
       </div>
       <div className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`} ref={hostRef} />
       <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
-        {mode === 'map' && MapView && (
+        {MapView && (
           <MapView
-            events={events}
-            assets={assets}
+            events={mapEvents || events}
+            assets={mapAssets || assets}
             selected={selected}
             onSelect={onSelect}
             showRadiusFor={showRadiusFor}
             timeMode={timeMode}
+            scene={scene}
+            highlightAssetId={highlightAssetId}
+            focusPoint={focusPoint}
+            active={mode === 'map'}
           />
         )}
       </div>
@@ -116,56 +161,72 @@ export default function GlobeMap({ events, assets, selected, onSelect, showRadiu
             type="button"
             onClick={() => {
               setMode('map')
-              import('./MapView.jsx').then((m) => setMapView(() => m.default))
             }}
           >
-            Open terrain map
+            Open Streets
           </button>
         </div>
       )}
 
       <div className="view-toggle">
         <button className={mode === 'globe' ? 'active' : ''} onClick={() => setMode('globe')}>
-          3D Globe
+          Globe
         </button>
-        <button
-          className={mode === 'map' ? 'active' : ''}
-          onClick={() => {
-            setMode('map')
-            import('./MapView.jsx').then((m) => setMapView(() => m.default))
-          }}
-        >
-          Terrain map
+        <button className={mode === 'map' ? 'active' : ''} onClick={() => setMode('map')}>
+          Map
         </button>
       </div>
 
-      <div className="telemetry">
-        <span>SAT-CORVEX</span>
-        <b>
-          {hud.lat.toFixed(2)}° {hud.lng.toFixed(2)}°
-        </b>
-        <span>ALT {hud.alt.toFixed(2)}</span>
-        <i />
-      </div>
-
-      <div className="hud">
-        <div className="legend">
-          <h4>{mode === 'globe' ? 'Read' : 'Terrain'}</h4>
-          <div className="lg">Dashed ring = site fence</div>
-          <div className="lg">Arc = event → asset</div>
-          <div className="lg">Drag · scroll altitude</div>
+      {mode === 'globe' && status === 'live' && (
+        <div className="globe-tools">
+          <button type="button" className="terrain-btn" onClick={zoomOutGlobe}>
+            Zoom out
+          </button>
         </div>
-      </div>
+      )}
+
+      {mode === 'globe' && (
+        <>
+          <div className="telemetry">
+            <span>Camera</span>
+            {focusPoint ? (
+              <>
+                <b className="telemetry-target">{focusPoint.label}</b>
+                <span className="telemetry-sub">
+                  {fmtLat(hud.lat)} {fmtLng(hud.lng)} · alt {hud.alt.toFixed(1)}
+                </span>
+              </>
+            ) : (
+              <>
+                <b>
+                  {fmtLat(hud.lat)} {fmtLng(hud.lng)}
+                </b>
+                <span>Alt {hud.alt.toFixed(1)} · select a pin for details</span>
+              </>
+            )}
+            <i />
+          </div>
+
+          <div className="hud">
+            <div className="legend">
+              <h4>Globe view</h4>
+              <div className="lg">India events and global offices</div>
+              <div className="lg">Select a pin for coordinates</div>
+              <div className="lg">Drag to pan · scroll to zoom</div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
 function createWorld(el, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#03040a')
+  scene.background = new THREE.Color('#070b10')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
-  camera.position.set(0, 40, 280)
+  camera.position.set(0, 60, 320)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
@@ -179,67 +240,89 @@ function createWorld(el, getOnSelect) {
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.06
-  controls.autoRotate = true
-  controls.autoRotateSpeed = 0.55
-  controls.minDistance = 130
-  controls.maxDistance = 520
+  controls.autoRotate = false
+  controls.minDistance = 150
+  controls.maxDistance = 780
   controls.enablePan = false
+  controls.enableRotate = true
+  controls.enableZoom = true
+  controls.target.set(0, 0, 0)
 
-  scene.add(new THREE.AmbientLight(0xc4b8a4, 1.15))
-  const sun = new THREE.DirectionalLight(0xffe6c8, 1.35)
-  sun.position.set(-120, 80, 160)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.35))
+  const sun = new THREE.DirectionalLight(0xfff8f0, 1.65)
+  sun.position.set(-70, 120, 100)
   scene.add(sun)
+  const fill = new THREE.DirectionalLight(0xc8dcff, 0.42)
+  fill.position.set(110, -30, -80)
+  scene.add(fill)
+  const rim = new THREE.DirectionalLight(0xd8c4ff, 0.28)
+  rim.position.set(-130, 30, -110)
+  scene.add(rim)
 
-  const globe = new THREE.Mesh(
-    new THREE.SphereGeometry(R, 64, 48),
-    new THREE.MeshPhongMaterial({
-      color: 0x1a1410,
-      emissive: 0x0b0806,
-      shininess: 8,
-    }),
-  )
+  const earthTex = paintLightEarth()
+  const globeMat = new THREE.MeshPhongMaterial({
+    map: earthTex,
+    color: 0xe8eef4,
+    emissive: 0x0a1018,
+    emissiveIntensity: 0.12,
+    shininess: 22,
+    specular: 0x556677,
+  })
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
   scene.add(globe)
+
+  new THREE.TextureLoader().load(
+    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
+    (remote) => {
+      remote.colorSpace = THREE.SRGBColorSpace
+      remote.anisotropy = 8
+      globeMat.map = remote
+      globeMat.needsUpdate = true
+    },
+    undefined,
+    () => {
+      new THREE.TextureLoader().load(
+        'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-day.jpg',
+        (fallback) => {
+          fallback.colorSpace = THREE.SRGBColorSpace
+          globeMat.map = fallback
+          globeMat.needsUpdate = true
+        },
+      )
+    },
+  )
 
   const atmos = new THREE.Mesh(
     new THREE.SphereGeometry(R * 1.045, 48, 32),
     new THREE.MeshBasicMaterial({
-      color: 0x6a8aaa,
+      color: 0x3d6a8a,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.1,
       side: THREE.BackSide,
     }),
   )
   scene.add(atmos)
 
-  const stars = makeStars()
-  scene.add(stars)
-
   const overlay = new THREE.Group()
-  scene.add(overlay)
-
-  const loader = new THREE.TextureLoader()
-  loader.load(
-    '/textures/earth-night.jpg',
-    (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace
-      globe.material.map = tex
-      globe.material.color = new THREE.Color(0xffffff)
-      globe.material.needsUpdate = true
-    },
-    undefined,
-    () => {
-      globe.material.map = paintFallbackEarth()
-      globe.material.color = new THREE.Color(0xffffff)
-      globe.material.needsUpdate = true
-    },
-  )
+  globe.add(overlay)
 
   let raf = 0
   let paused = false
+  const _pinWorld = new THREE.Vector3()
+  const _camDir = new THREE.Vector3()
   const tick = () => {
     raf = requestAnimationFrame(tick)
     if (paused) return
     controls.update()
+    _camDir.copy(camera.position).normalize()
+    overlay.traverse((obj) => {
+      if (!obj.element) return
+      obj.getWorldPosition(_pinWorld)
+      const facing = _pinWorld.normalize().dot(_camDir)
+      const show = facing > 0.12
+      obj.element.style.visibility = show ? 'visible' : 'hidden'
+      obj.element.style.pointerEvents = show ? 'auto' : 'none'
+    })
     renderer.render(scene, camera)
     labels.render(scene, camera)
   }
@@ -255,7 +338,7 @@ function createWorld(el, getOnSelect) {
   resize()
   tick()
 
-  const setData = ({ events, assets, showRadiusFor, acked }) => {
+  const setData = ({ events, assets, showRadiusFor, pulseEventId, highlightAssetId, selected }) => {
     while (overlay.children.length) {
       const child = overlay.children[0]
       overlay.remove(child)
@@ -265,30 +348,41 @@ function createWorld(el, getOnSelect) {
       else child.material?.dispose()
     }
 
-    const seen = acked instanceof Set ? acked : new Set(acked || [])
     const fence = assets.find((a) => a.id === showRadiusFor)
 
     for (const a of assets) {
-      overlay.add(htmlPin(a.coords[1], a.coords[0], assetMarkerHtml(a), () => getOnSelect()?.({ type: 'asset', id: a.id })))
+      overlay.add(
+        htmlPin(
+          a.coords[1],
+          a.coords[0],
+          assetMarkerHtml(a),
+          () => getOnSelect()?.({ type: 'asset', id: a.id }),
+          highlightAssetId === a.id ? 'is-hot' : '',
+        ),
+      )
     }
     if (fence) {
       overlay.add(fenceRing(fence.coords[1], fence.coords[0], fence.radiusKm, 0xc4a574))
     }
     for (const e of events) {
-      const dim = seen.has(e.id)
-      overlay.add(htmlPin(e.coords[1], e.coords[0], eventMarkerHtml(e), () => getOnSelect()?.({ type: 'event', id: e.id })))
-      overlay.add(dot(e.coords[1], e.coords[0], colorFor(e), dim ? 0.28 : 1))
-      if (!dim && (e.impact === 'high' || e.kind === 'fire' || e.kind === 'quake')) {
-        overlay.add(ring(e.coords[1], e.coords[0], e.kind === 'quake' ? 10 : 5.5, colorFor(e)))
-      }
-      if (e.linked && !dim) {
+      overlay.add(
+        htmlPin(
+          e.coords[1],
+          e.coords[0],
+          eventMarkerHtml(e),
+          () => getOnSelect()?.({ type: 'event', id: e.id }),
+          pulseEventId === e.id ? 'is-pulse' : '',
+        ),
+      )
+      overlay.add(surfaceDot(e.coords[1], e.coords[0], colorFor(e)))
+      if (e.impact === 'high' || pulseEventId === e.id) {
         overlay.add(
-          arc(
+          surfaceHalo(
             e.coords[1],
             e.coords[0],
-            e.primary.asset.coords[1],
-            e.primary.asset.coords[0],
-            e.impact === 'high' ? 0xff4d12 : 0x5c7d86,
+            pulseEventId === e.id ? 4 : 3.6,
+            colorFor(e),
+            pulseEventId === e.id ? 0.48 : 0.3,
           ),
         )
       }
@@ -303,19 +397,51 @@ function createWorld(el, getOnSelect) {
     return { lat, lng, alt }
   }
 
-  const flyTo = (lat, lng, close = false) => {
+  let flyRaf = 0
+  const cancelFly = () => {
+    if (flyRaf) cancelAnimationFrame(flyRaf)
+    flyRaf = 0
+    controls.enabled = true
+  }
+
+  const animateCamera = (dest, duration = 1200, { lockControls = true } = {}) => {
+    cancelFly()
     controls.autoRotate = false
-    const dest = latLngToVec3(lat, lng, close ? 0.2 : 1.35)
+    if (lockControls) controls.enabled = false
+    else controls.enabled = true
     const start = camera.position.clone()
     const t0 = performance.now()
     const step = () => {
-      const t = Math.min(1, (performance.now() - t0) / 1400)
+      const t = Math.min(1, (performance.now() - t0) / duration)
       const k = 1 - (1 - t) ** 3
       camera.position.lerpVectors(start, dest, k)
       camera.lookAt(0, 0, 0)
-      if (t < 1) requestAnimationFrame(step)
+      controls.target.set(0, 0, 0)
+      if (t < 1) {
+        flyRaf = requestAnimationFrame(step)
+      } else {
+        flyRaf = 0
+        controls.enabled = true
+        controls.update()
+      }
     }
-    step()
+    flyRaf = requestAnimationFrame(step)
+  }
+
+  renderer.domElement.addEventListener('pointerdown', () => {
+    if (flyRaf) cancelFly()
+  })
+
+  const flyTo = (lat, lng, close = false) => {
+    const alt = close ? 0.85 : 1.85
+    animateCamera(latLngToVec3(lat, lng, alt), 1400)
+  }
+
+  const zoomOut = () => {
+    cancelFly()
+    controls.enabled = true
+    controls.target.set(0, 0, 0)
+    animateCamera(new THREE.Vector3(0, 90, 320), 900, { lockControls: false })
   }
 
   return {
@@ -323,6 +449,7 @@ function createWorld(el, getOnSelect) {
     resize,
     pointOfView,
     flyTo,
+    zoomOut,
     setAutoRotate: (on) => {
       controls.autoRotate = on
     },
@@ -330,6 +457,7 @@ function createWorld(el, getOnSelect) {
       paused = on
     },
     dispose: () => {
+      cancelFly()
       cancelAnimationFrame(raf)
       controls.dispose()
       renderer.dispose()
@@ -350,10 +478,10 @@ function latLngToVec3(lat, lng, alt = 0) {
   )
 }
 
-function htmlPin(lat, lng, html, onClick) {
+function htmlPin(lat, lng, html, onClick, extraClass = '') {
   const wrap = document.createElement('button')
   wrap.type = 'button'
-  wrap.className = 'globe-pin'
+  wrap.className = `globe-pin ${extraClass}`.trim()
   wrap.innerHTML = html
   wrap.onclick = (e) => {
     e.stopPropagation()
@@ -364,31 +492,34 @@ function htmlPin(lat, lng, html, onClick) {
   return obj
 }
 
-function dot(lat, lng, color, opacity = 1) {
+function surfaceDot(lat, lng, color) {
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.7, 10, 10),
-    new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity }),
+    new THREE.SphereGeometry(0.55, 10, 10),
+    new THREE.MeshBasicMaterial({ color }),
   )
   mesh.position.copy(latLngToVec3(lat, lng, 0.01))
   return mesh
 }
 
-function ring(lat, lng, size, color) {
-  const g = new THREE.RingGeometry(size * 0.55, size, 48)
-  const m = new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity: 0.35,
-    side: THREE.DoubleSide,
-  })
-  const mesh = new THREE.Mesh(g, m)
+function surfaceHalo(lat, lng, size, color, opacity = 0.35) {
+  const geo = new THREE.RingGeometry(size * 0.84, size, 40)
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  )
   const p = latLngToVec3(lat, lng, 0.012)
   mesh.position.copy(p)
   mesh.lookAt(0, 0, 0)
   return mesh
 }
 
-function arc(lat0, lng0, lat1, lng1, color) {
+function dashedArc(lat0, lng0, lat1, lng1, color) {
   const v0 = latLngToVec3(lat0, lng0, 0.01)
   const v1 = latLngToVec3(lat1, lng1, 0.01)
   const mid = v0.clone().add(v1).multiplyScalar(0.5)
@@ -396,7 +527,18 @@ function arc(lat0, lng0, lat1, lng1, color) {
   mid.normalize().multiplyScalar(R + lift)
   const curve = new THREE.QuadraticBezierCurve3(v0, mid, v1)
   const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(56))
-  return new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 }))
+  const line = new THREE.Line(
+    geo,
+    new THREE.LineDashedMaterial({
+      color,
+      dashSize: 1.35,
+      gapSize: 0.85,
+      transparent: true,
+      opacity: 0.95,
+    }),
+  )
+  line.computeLineDistances()
+  return line
 }
 
 function fenceRing(lat, lng, radiusKm, color) {
@@ -432,50 +574,89 @@ function destPoint(lat, lng, km, bearingDeg) {
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI]
 }
 
-function makeStars() {
-  const n = 600
-  const pos = new Float32Array(n * 3)
-  for (let i = 0; i < n; i++) {
-    const v = new THREE.Vector3().randomDirection().multiplyScalar(700 + Math.random() * 400)
-    pos[i * 3] = v.x
-    pos[i * 3 + 1] = v.y
-    pos[i * 3 + 2] = v.z
-  }
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x8a9bb0, size: 1.15 }))
-}
-
-function paintFallbackEarth() {
+function paintLightEarth() {
+  const w = 2048
+  const h = 1024
   const c = document.createElement('canvas')
-  c.width = 1024
-  c.height = 512
+  c.width = w
+  c.height = h
   const g = c.getContext('2d')
-  g.fillStyle = '#0c1218'
-  g.fillRect(0, 0, 1024, 512)
-  g.fillStyle = '#2a241c'
-  const blobs = [
-    [280, 180, 160, 90],
-    [520, 220, 90, 70],
-    [780, 160, 140, 80],
-    [350, 340, 70, 110],
-    [820, 340, 100, 60],
+
+  const ocean = g.createLinearGradient(0, 0, 0, h)
+  ocean.addColorStop(0, '#8ec0de')
+  ocean.addColorStop(0.5, '#6ba8cc')
+  ocean.addColorStop(1, '#5a96bc')
+  g.fillStyle = ocean
+  g.fillRect(0, 0, w, h)
+
+  const land = [
+    [420, 360, 200, 110, '#c4b48a'],
+    [980, 320, 240, 130, '#b8a078'],
+    [1480, 300, 220, 100, '#c9b896'],
+    [560, 620, 120, 150, '#a8c090'],
+    [1180, 580, 180, 120, '#b0a070'],
+    [1680, 520, 160, 90, '#9aab72'],
+    [300, 480, 90, 70, '#b8a078'],
+    [820, 440, 70, 55, '#c4b48a'],
+    [640, 280, 55, 40, '#8faa6e'],
+    [1320, 420, 80, 50, '#a69068'],
   ]
-  for (const [x, y, rx, ry] of blobs) {
+  for (const [x, y, rx, ry, base] of land) {
+    const shade = g.createRadialGradient(x - rx * 0.25, y - ry * 0.3, rx * 0.08, x, y, rx * 1.15)
+    shade.addColorStop(0, lighten(base, 28))
+    shade.addColorStop(0.45, base)
+    shade.addColorStop(0.82, darken(base, 22))
+    shade.addColorStop(1, darken(base, 38))
+    g.fillStyle = shade
     g.beginPath()
     g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
     g.fill()
+    g.strokeStyle = darken(base, 45)
+    g.lineWidth = 3
+    g.stroke()
   }
+
+  for (let i = 0; i < 48; i++) {
+    const x = Math.random() * w
+    const y = Math.random() * h
+    const r = 24 + Math.random() * 70
+    const dent = g.createRadialGradient(x, y, 0, x, y, r)
+    dent.addColorStop(0, 'rgba(42, 58, 72, 0.14)')
+    dent.addColorStop(1, 'rgba(42, 58, 72, 0)')
+    g.fillStyle = dent
+    g.beginPath()
+    g.arc(x, y, r, 0, Math.PI * 2)
+    g.fill()
+  }
+
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   return tex
 }
 
+function lighten(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.min(255, ((n >> 16) & 255) + amt)
+  const g = Math.min(255, ((n >> 8) & 255) + amt)
+  const b = Math.min(255, (n & 255) + amt)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+function darken(hex, amt) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = Math.max(0, ((n >> 16) & 255) - amt)
+  const g = Math.max(0, ((n >> 8) & 255) - amt)
+  const b = Math.max(0, (n & 255) - amt)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
 function colorFor(e) {
   if (e.kind === 'fire') return 0xff4d12
-  if (e.kind === 'flood') return 0x3ce0c8
-  if (e.kind === 'storm') return 0x9bb4ff
-  if (e.kind === 'security') return 0xff4d78
-  if (e.kind === 'protest') return 0xe8c36a
-  return 0xc4a574
+  if (e.kind === 'flood') return 0x22c55e
+  if (e.kind === 'storm') return 0x38bdf8
+  if (e.kind === 'security') return 0xec4899
+  if (e.kind === 'protest') return 0x8b5cf6
+  if (e.kind === 'quake') return 0xe8d27a
+  if (e.kind === 'haze') return 0x94a3b8
+  return 0x6366f1
 }

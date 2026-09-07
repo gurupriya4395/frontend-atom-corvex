@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atom Corvex · HTML prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/desk.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar ops-topbar">
+        <div class="brand">
+          <span class="brand-mark">Atom Corvex</span>
+          <span class="ops-mode-badge" id="view-badge">Globe view</span>
+        </div>
+        <div class="topbar-coords-panel" id="coords-panel">
+          <span class="topbar-coords-hint">Select an event or site to see coordinates</span>
+        </div>
+        <div class="top-right">
+          <span class="ops-live-pill"><span class="live-dot"></span> Live</span>
+          <button class="ghost" type="button">Demo</button>
+          <input class="search ops-search" placeholder="Search city, HQ, flood…" />
+          <span class="stamp ops-clock" id="clock">--:--:--</span>
+        </div>
+      </header>
+
+      <div class="ops-chrome-stack">
+        <section class="alerts-strip" aria-label="Alert summary">
+          <div class="alerts-strip-head">
+            <span class="alerts-strip-title">Summary</span>
+            <span class="alerts-strip-window">Live now</span>
+          </div>
+          <div class="alerts-strip-body" id="alert-cells"></div>
+        </section>
+
+        <div class="ops-meta-row">
+          <div class="coord-strip" id="coord-strip">
+            <span class="coord-strip-empty">Select an event or site to view coordinates</span>
+          </div>
+          <div class="risk-row desk" id="risk-row">
+            <span class="risk-row-tag">Overview</span>
+            <div class="risk-score-main"><strong>1.82</strong><span>peak score</span></div>
+            <div class="risk-factors">
+              <span class="risk-chip">3 near assets</span>
+              <span class="risk-chip alert">1 flagged</span>
+              <span class="risk-chip">6 active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ops">
+        <main class="map-wrap is-satellite">
+          <div class="map-stage on">
+            <div class="map-placeholder">
+              <p>Globe / map area</p>
+              <span>Edit HTML in <code>html-prototype/</code> — React app in <code>src/</code> is untouched.</span>
+            </div>
+          </div>
+          <div class="view-toggle">
+            <button type="button" class="active" data-view="globe">Globe</button>
+            <button type="button" data-view="map">Map</button>
+          </div>
+        </main>
+
+        <aside class="rail ops-rail">
+          <header class="ops-rail-head">
+            <div>
+              <span class="ops-rail-tag">Filters</span>
+              <h3>Refine list</h3>
+            </div>
+            <span class="ops-rail-time" id="utc-clock">--:-- UTC</span>
+          </header>
+          <div class="ops-summary">
+            <div class="ops-summary-item"><em>6</em><span>Showing</span></div>
+            <div class="ops-summary-item"><em>5</em><span>Live</span></div>
+            <div class="ops-summary-item warn"><em>1</em><span>Forecast</span></div>
+          </div>
+          <div class="filters ops-filters">
+            <div>
+              <label>Category</label>
+              <div class="chip-rows">
+                <button type="button" class="fchip on">Civil</button>
+                <button type="button" class="fchip on">Weather</button>
+                <button type="button" class="fchip on">Security</button>
+              </div>
+            </div>
+            <div>
+              <label>Severity</label>
+              <div class="chip-rows">
+                <button type="button" class="fchip high on">High</button>
+                <button type="button" class="fchip on">Medium</button>
+                <button type="button" class="fchip on">Low</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <aside class="feed ops-feed">
+          <div class="feed-head">
+            <div class="feed-title">
+              <h2>Proximity</h2>
+              <em id="feed-count">5</em>
+            </div>
+            <div class="feed-meta">
+              <span class="live-dot"></span>
+              <span>Live feed</span>
+              <span id="feed-clock">--:--</span>
+            </div>
+          </div>
+          <div class="cards" id="event-cards"></div>
+        </aside>
+
+        <div class="time-strip">
+          <button type="button" class="ghost">Replay</button>
+          <div class="track"><i class="head live"></i><span class="t0">now</span><span class="t2">+2d</span></div>
+          <div class="time-dock">
+            <button type="button" class="active">live</button>
+            <button type="button">forecast</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="js/desk.js"></script>
+  </body>
+</html>

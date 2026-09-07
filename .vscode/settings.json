@@ -1,0 +1,16 @@
+{
+  "workbench.sideBar.location": "left",
+  "workbench.panel.defaultLocation": "bottom",
+  "workbench.editor.showTabs": true,
+  "workbench.editor.openSideBySideDirection": "right",
+  "explorer.openEditors.visible": 1,
+  "diffEditor.renderSideBySide": true,
+  "diffEditor.hideUnchangedRegions.enabled": true,
+  "scm.diffDecorations": "all",
+  "editor.minimap.enabled": true,
+  "editor.wordWrap": "off",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true
+  }
+}

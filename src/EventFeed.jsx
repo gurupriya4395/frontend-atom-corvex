@@ -1,97 +1,57 @@
-import { relativeTime } from './scoring'
+import { eventMarkerHtml } from './markers'
+import { clock } from './scoring'
 
-export default function EventFeed({
-  events,
-  mode,
-  onMode,
-  selectedId,
-  onSelect,
-  now,
-  counts,
-  freshId,
-  acked,
-}) {
-  const headline = events[0]?.title || 'Waiting on the wire…'
+function isForecastEvent(ev) {
+  return Boolean(ev.forecast) || ev.eventAt > Date.now()
+}
+
+export default function EventFeed({ events, selectedId, onSelect, now, counts, freshId, timeMode, emptyHint }) {
+  const modeLabel = timeMode === 'forecast' ? 'Forecast · 2 days' : 'Live feed'
+  const n = timeMode === 'forecast' ? counts.forecast : counts.live
 
   return (
-    <aside className="feed">
+    <aside className="feed ops-feed">
       <div className="feed-head">
-        <div className="ticker" key={headline}>
-          <span>ON WIRE</span>
-          <p>{headline}</p>
-        </div>
-        <div className="feed-tabs">
-          {[
-            ['geographical', 'Geo', counts.geo],
-            ['proximity', 'Prox', counts.prox],
-            ['watchlist', 'Watch', counts.watch],
-          ].map(([m, label, n]) => (
-            <button key={m} className={mode === m ? 'active' : ''} onClick={() => onMode(m)}>
-              {label}
-              <em>{n}</em>
-            </button>
-          ))}
+        <div className="feed-title">
+          <h2>Proximity</h2>
+          <em>{n ?? events.length}</em>
         </div>
         <div className="feed-meta">
           <span className="live-dot" />
-          <span>ATOM-CORVEX desk</span>
+          <span>{modeLabel}</span>
           <span>{now.toLocaleTimeString('en-GB', { hour12: false })}</span>
         </div>
       </div>
       <div className="cards">
-        {events.length === 0 && (
-          <div className="empty">Nothing in this cut. Open Geographical, or switch off “Near our sites”.</div>
-        )}
-        {events.map((ev, i) => (
-          <button
-            key={ev.id}
-            className={`card kind-${ev.kind} impact-${ev.impact || 'none'} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''} ${acked?.has(ev.id) ? 'acked' : ''}`}
-            style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-            onClick={() => onSelect(ev.id)}
-          >
-            <span dangerouslySetInnerHTML={{ __html: marker(ev) }} />
-            <span>
-              <div className="meta">
-                <span className={`chip ${ev.severity}`}>{ev.severity}</span>
-                <span className="ago">{relativeTime(ev.publishedAt)}</span>
-                {ev.impact === 'high' && <span className="chip high">on us</span>}
-              </div>
-              <h3>{ev.title}</h3>
-              {ev.linked ? (
-                <div className="affects">
-                  {ev.primary.asset.name} · {ev.primary.km.toFixed(1)} km
+        {events.length === 0 && <div className="empty">{emptyHint}</div>}
+        {events.map((ev, i) => {
+          const assetName = ev.primary?.asset?.name
+          const when = clock(ev.eventAt || ev.publishedAt)
+          const forecast = isForecastEvent(ev)
+          return (
+            <button
+              key={ev.id}
+              type="button"
+              className={`card kind-${ev.kind} ${selectedId === ev.id ? 'selected' : ''} ${freshId === ev.id ? 'fresh' : ''}`}
+              style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              onClick={() => onSelect(ev.id)}
+            >
+              <span className="card-mark" dangerouslySetInnerHTML={{ __html: eventMarkerHtml(ev) }} />
+              <span className="card-body">
+                <div className="card-kicker">
+                  <span className={`chip ${forecast ? 'forecast' : 'ok'}`}>{forecast ? 'forecast' : 'live'}</span>
+                  <span className={`chip ${ev.severity}`}>{ev.severity}</span>
+                  <span className="ago">{when}</span>
                 </div>
-              ) : (
-                <div className="unlinked">Off our map</div>
-              )}
-              {mode === 'watchlist' && ev.updates?.length > 0 && (
-                <ol className="thread">
-                  {ev.updates.slice(-3).map((u, n) => (
-                    <li key={`${ev.id}-u-${n}`}>{u.text}</li>
-                  ))}
-                </ol>
-              )}
-            </span>
-          </button>
-        ))}
+                <h3>{ev.title}</h3>
+                <p className="why">{ev.summary || ev.why}</p>
+                {assetName && <p className="asset-hit">Asset affected · {assetName}</p>}
+                <p className="card-date">{when}</p>
+              </span>
+            </button>
+          )
+        })}
       </div>
     </aside>
   )
-}
-
-function marker(ev) {
-  return `<span class="haz haz-${ev.kind} impact-${ev.impact || 'none'}">${inner(ev.kind)}</span>`
-}
-
-function inner(kind) {
-  const map = {
-    fire: `<span class="flame"><i></i><i></i><i></i></span><span class="glow"></span>`,
-    flood: `<span class="ripples"><i></i><i></i><i></i></span><span class="drop"></span>`,
-    storm: `<span class="cyclone"><svg viewBox="0 0 64 64"><path d="M32 8c8 6 14 10 18 18 3 7-1 14-8 16-9 3-16-2-18-10-1-6 3-10 8-11 4 0 6 3 6 6 0 2-1 4-4 4"/></svg></span>`,
-    protest: `<span class="crowd"><i></i><i></i><i></i></span>`,
-    quake: `<span class="shock"><i></i><i></i><i></i></span>`,
-    security: `<span class="siren"><i></i><b></b></span>`,
-    haze: `<span class="smoke"><i></i><i></i><i></i></span>`,
-  }
-  return map[kind] || `<span class="dot"></span>`
 }

@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:html": "vite --config html-app/vite.config.js",
+    "dev:react": "vite",
+    "build:html": "vite build --config html-app/vite.config.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

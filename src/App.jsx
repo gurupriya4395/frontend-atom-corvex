@@ -1,11 +1,17 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import EventFeed from './EventFeed'
-import EventDetail from './EventDetail'
 import SideRail from './SideRail'
-import { ASSETS, EVENTS, INCOMING } from './data'
-import { enrich, clock } from './scoring'
+import AlertsSummaryStrip, { ALERT_FILTERS } from './AlertsSummaryStrip'
+import CoordStrip from './CoordStrip'
+import RiskScoreRow from './RiskScoreRow'
+import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './data'
+import { DESK_BEATS } from './sequence'
+import { enrich, clock, searchHay } from './scoring'
+import { fmtLat, fmtLng } from './coords'
+import { VIEW_LABELS, TIME_WINDOW_LABELS, WORKSPACE_LABELS } from './labels'
 import './index.css'
 import './markers.css'
+import './nav.css'
 
 const GlobeMap = lazy(() => import('./GlobeMap'))
 
@@ -21,14 +27,26 @@ export default function App() {
   const [sevs, setSevs] = useState({ high: true, medium: true, low: true })
   const [selectedId, setSelectedId] = useState(null)
   const [selectedAssetId, setSelectedAssetId] = useState(null)
-  const [alertsOpen, setAlertsOpen] = useState(false)
-  const [acked, setAcked] = useState(() => new Set())
+  const [siteFilterId, setSiteFilterId] = useState(null)
   const [boot, setBoot] = useState(true)
   const [now, setNow] = useState(() => new Date())
   const [latencyMs, setLatencyMs] = useState(86)
-  const [log, setLog] = useState(['Desk open · waiting on ATOM-CORVEX'])
+  const [log, setLog] = useState(['Desk ready · waiting for events'])
   const [freshId, setFreshId] = useState(null)
   const [toast, setToast] = useState(null)
+  const [stripFilter, setStripFilter] = useState(null)
+  const [mapMode, setMapMode] = useState('globe')
+  const [workspace, setWorkspace] = useState('monitor')
+  const [monitorWindow, setMonitorWindow] = useState('live')
+  const [presentation, setPresentation] = useState('map')
+  const [scene, setScene] = useState({
+    pulse: false,
+    flood: false,
+    warehouse: false,
+    distance: false,
+  })
+  const searchRef = useRef(null)
+  const cueTimers = useRef([])
 
   useEffect(() => {
     const t = setTimeout(() => setBoot(false), 1800)
@@ -83,25 +101,80 @@ export default function App() {
     return () => clearTimeout(t)
   }, [freshId, toast])
 
+  const TWO_DAYS_MS = 2 * 86400 * 1000
+  const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
+  const inNextTwoDays = (e) => {
+    const at = e.eventAt || e.publishedAt
+    return at > Date.now() && at <= Date.now() + TWO_DAYS_MS
+  }
+
   const timed = enriched.filter((e) => {
-    if (timeMode === 'forecast') return e.forecast || e.eventAt > Date.now()
-    if (timeMode === 'history') return e.publishedAt < Date.now() - 6 * 3600 * 1000 && !e.forecast
-    return !e.forecast
+    if (timeMode === 'forecast') return isForecastEvent(e) && inNextTwoDays(e)
+    if (timeMode === 'history') return !isForecastEvent(e)
+    return !isForecastEvent(e)
   })
 
-  const filtered = timed.filter((e) => {
-    if (!cats[e.category]) return false
-    if (!sevs[e.severity]) return false
-    if (q && !`${e.title} ${e.place} ${e.domain}`.toLowerCase().includes(q.toLowerCase())) return false
-    if (feedMode === 'proximity' || affectsOnly) return e.linked
-    if (feedMode === 'watchlist') return e.alert || e.impact === 'high'
+  const needle = q.trim().toLowerCase()
+  const catsOn = Object.values(cats).some(Boolean)
+  const sevsOn = Object.values(sevs).some(Boolean)
+
+  const listed = timed.filter((e) => {
+    if (e.flag !== 'IN') return false
+    if (!cats[e.category] || !sevs[e.severity]) return false
+    if (needle && !searchHay(e).includes(needle)) return false
     return true
   })
 
+  const stripFiltered = listed.filter((e) => {
+    if (!stripFilter) return true
+    switch (stripFilter) {
+      case ALERT_FILTERS.total:
+        return timeMode === 'forecast' ? isForecastEvent(e) : !isForecastEvent(e)
+      case ALERT_FILTERS.nearSites:
+        return e.linked
+      case ALERT_FILTERS.upcoming:
+        return isForecastEvent(e) && inNextTwoDays(e)
+      case ALERT_FILTERS.crucial:
+        return e.severity === 'high'
+      case ALERT_FILTERS.warning:
+        return e.severity === 'medium'
+      case ALERT_FILTERS.notification:
+        return e.severity === 'low'
+      case ALERT_FILTERS.informative:
+        return e.category === 'environmental'
+      case ALERT_FILTERS.intelligence:
+        return e.category === 'security' || e.category === 'geopolitical'
+      default:
+        return true
+    }
+  })
+
+  const globeEvents = stripFiltered
+  const filtered = stripFiltered
+
+  const indiaPool = enriched.filter((e) => e.flag === 'IN' && cats[e.category] && sevs[e.severity])
+  const alertStats = {
+    total: timeMode === 'forecast'
+      ? indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length
+      : indiaPool.filter((e) => !isForecastEvent(e)).length,
+    nearSites: indiaPool.filter((e) => e.linked).length,
+    upcoming: indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length,
+    crucial: indiaPool.filter((e) => e.severity === 'high').length,
+    warning: indiaPool.filter((e) => e.severity === 'medium').length,
+    notification: indiaPool.filter((e) => e.severity === 'low').length,
+    informative: indiaPool.filter((e) => e.category === 'environmental').length,
+    intelligence: indiaPool.filter((e) => e.category === 'security' || e.category === 'geopolitical').length,
+  }
+
   const counts = {
-    geo: timed.filter((e) => cats[e.category] && sevs[e.severity]).length,
-    prox: timed.filter((e) => e.linked && cats[e.category] && sevs[e.severity]).length,
-    watch: timed.filter((e) => (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity]).length,
+    geo: timed.filter((e) => e.flag === 'IN' && cats[e.category] && sevs[e.severity]).length,
+    prox: listed.length,
+    live: enriched.filter((e) => e.flag === 'IN' && !isForecastEvent(e) && cats[e.category] && sevs[e.severity]).length,
+    forecast: enriched.filter(
+      (e) => e.flag === 'IN' && isForecastEvent(e) && inNextTwoDays(e) && cats[e.category] && sevs[e.severity],
+    ).length,
+    watch: timed.filter((e) => e.flag === 'IN' && (e.alert || e.impact === 'high') && cats[e.category] && sevs[e.severity])
+      .length,
   }
 
   const selectedEvent = enriched.find((e) => e.id === selectedId)
@@ -111,47 +184,134 @@ export default function App() {
       : selectedAssetId
         ? { type: 'asset', id: selectedAssetId }
         : null
-  const alerts = enriched.filter((e) => e.alert && !acked.has(e.id))
-  const showRadius = selectedEvent?.linked ? selectedEvent.primary.asset.id : selectedAssetId
+  const showRadius = scene.warehouse
+    ? DEMO.assetId
+    : selectedEvent?.linked
+      ? selectedEvent.primary.asset.id
+      : selectedAssetId
 
-  const pickEvent = (id) => {
+  const selectedAsset = selectedAssetId ? ASSETS.find((a) => a.id === selectedAssetId) : null
+  const focusPoint = selectedEvent?.coords
+    ? {
+        lat: selectedEvent.coords[1],
+        lng: selectedEvent.coords[0],
+        label: selectedEvent.place?.split(',')[0] || selectedEvent.title,
+        type: 'event',
+      }
+    : selectedAsset?.coords
+      ? {
+          lat: selectedAsset.coords[1],
+          lng: selectedAsset.coords[0],
+          label: selectedAsset.name,
+          type: 'asset',
+        }
+      : null
+
+  const emptyHint = (() => {
+    if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
+    if (needle) return `No match for “${q}”. Try a city, HQ, or kind (flood, fire).`
+    if (timeMode === 'forecast') return 'No forecast events in the next 2 days.'
+    return 'No live events on the desk right now.'
+  })()
+
+  const pickEvent = (id, opts = {}) => {
     setSelectedId(id)
     setSelectedAssetId(null)
     setPage('operations')
+    if (opts.map) setMapMode('map')
   }
 
-  const pickAsset = (id) => {
+  const pickAsset = (id, opts = {}) => {
     setSelectedAssetId(id)
     setSelectedId(null)
+    setSiteFilterId(id)
     setPage('operations')
-    setAffectsOnly(false)
-    setFeedMode('geographical')
+    setFeedMode('proximity')
+    if (opts.map) setMapMode('map')
+  }
+
+  useEffect(() => {
+    if (selectedId || selectedAssetId) return
+    const first = filtered.find((e) => e.linked) || filtered[0]
+    if (first) setSelectedId(first.id)
+  }, [filtered, selectedId, selectedAssetId])
+
+  const clearSelection = () => {
+    setSelectedId(null)
+    setSelectedAssetId(null)
+    setSiteFilterId(null)
+    setScene((s) => ({ ...s, pulse: false, warehouse: false }))
+  }
+
+  const resetScene = () =>
+    setScene({ pulse: false, flood: false, warehouse: false, distance: false })
+
+  const clearCueTimers = () => {
+    cueTimers.current.forEach(clearTimeout)
+    cueTimers.current = []
   }
 
   const runDesk = () => {
+    clearCueTimers()
     setPage('operations')
     setTimeMode('live')
     setFeedMode('proximity')
     setAffectsOnly(true)
-    setAlertsOpen(false)
-    pickEvent('ev-flood-mum')
-    window.setTimeout(() => pickEvent('ev-fire-thane'), 2400)
-    window.setTimeout(() => setAlertsOpen(true), 4800)
+    setSiteFilterId(null)
+    setSelectedId(null)
+    setSelectedAssetId(null)
+    setQ('')
+    setCats({ geopolitical: true, environmental: true, security: true })
+    setSevs({ high: true, medium: true, low: true })
+    setMapMode('globe')
+    resetScene()
+    DESK_BEATS.forEach((beat) => {
+      cueTimers.current.push(
+        window.setTimeout(() => {
+          if (beat.mapMode) setMapMode(beat.mapMode)
+          setScene((s) => ({
+            pulse: beat.pulse ?? s.pulse,
+            flood: beat.flood ?? s.flood,
+            warehouse: beat.warehouse ?? s.warehouse,
+            distance: beat.distance ?? s.distance,
+          }))
+          if (beat.select) pickEvent(DEMO.eventId, { map: beat.mapMode === 'map' })
+          if (beat.brief) pickEvent(DEMO.eventId, { map: true })
+        }, beat.at),
+      )
+    })
   }
 
-  const ack = (id) => {
-    setAcked((s) => new Set(s).add(id))
-    setAlertsOpen(false)
-  }
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
+      if (e.key === '/' && !typing) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+      if (e.key === 'Escape') {
+        clearCueTimers()
+        resetScene()
+        setSelectedId(null)
+        searchRef.current?.blur()
+      }
+      if ((e.key === 'r' || e.key === 'R') && !typing && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        runDesk()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [enriched])
 
   return (
     <div className="app">
       {boot && (
         <div className="boot">
           <div className="boot-inner">
-            <span className="boot-tag">GSOC · DEMO</span>
-            <h1>ATOM-CORVEX</h1>
-            <p>Raising the desk · CORVEX on the wire</p>
+            <span className="boot-tag">Demo</span>
+            <h1>Atom Corvex</h1>
+            <p>Starting operations view</p>
             <ol className="boot-steps">
               <li>Ingest</li>
               <li>Correlate</li>
@@ -165,121 +325,128 @@ export default function App() {
         </div>
       )}
 
-      <header className="topbar">
+      <header className="topbar ops-topbar">
         <div className="brand">
-          <span className="brand-mark">ATOM-CORVEX</span>
-          <span className="brand-sub">Eyes on operations</span>
+          <span className="brand-mark">Atom Corvex</span>
+          <span className="ops-mode-badge">{VIEW_LABELS[mapMode] || VIEW_LABELS.globe}</span>
         </div>
-        <nav className="nav">
-          <button className={page === 'operations' ? 'active' : ''} onClick={() => setPage('operations')}>
-            Floor
-          </button>
-          <button className={page === 'assets' ? 'active' : ''} onClick={() => setPage('assets')}>
-            Sites
-          </button>
+        <nav className="menu-nav" aria-label="Workspace">
+          {[
+            ['command', 'Command Center'],
+            ['monitor', 'Monitor'],
+            ['assets', 'Assets'],
+            ['response', 'Response'],
+            ['insights', 'Insights'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={workspace === id ? 'active' : ''}
+              onClick={() => setWorkspace(id)}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
         <div className="top-right">
+          <span className="ops-live-pill">
+            <span className="live-dot" />
+            Live
+          </span>
           <button className="ghost run-desk" type="button" onClick={runDesk}>
-            Run desk
+            Demo
           </button>
-          <input className="search" placeholder="Search a city or event" value={q} onChange={(e) => setQ(e.target.value)} />
-          <span className="stamp">{clock(now.getTime())}</span>
-          <button className={`bell ${alerts.length ? 'has' : ''} ${alertsOpen ? 'open' : ''}`} onClick={() => setAlertsOpen((v) => !v)} aria-label="Alerts">
-            {alerts.length > 0 && <span className="n">{alerts.length}</span>}
-            ▴
-          </button>
+          <input
+            ref={searchRef}
+            className="search ops-search"
+            placeholder="Search city, HQ, flood…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && filtered[0]) pickEvent(filtered[0].id)
+            }}
+          />
+          <span className="stamp ops-clock">{clock(now.getTime())}</span>
         </div>
       </header>
 
-      {alertsOpen && (
-        <div className="alerts-pop">
-          <header>Still open</header>
-          {alerts.length === 0 && <div className="empty">All quiet. Acknowledged alerts drop off the bell.</div>}
-          {alerts.map((a) => (
-            <button
-              key={a.id}
-              className="item"
-              onClick={() => {
-                pickEvent(a.id)
-                setAlertsOpen(false)
-              }}
-            >
-              <strong>{a.impact?.toUpperCase()}</strong>
-              <div>{a.title}</div>
-              <div className="stamp">
-                {a.linked ? `${a.primary.asset.name} · ${a.primary.km.toFixed(1)} km` : 'unlinked'}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {page === 'assets' ? (
-        <div className="assets-page">
-          <header className="assets-head">
-            <div>
-              <h2>Registered sites</h2>
-              <p className="stamp">Click a site to throw the fence on the globe.</p>
-            </div>
-            <span className="stamp">{ASSETS.length} assets on the book</span>
-          </header>
-          <div className="site-grid">
-            {ASSETS.map((a) => {
-              const hits = enriched.filter((e) => e.linked && e.primary.asset.id === a.id)
-              const hot = hits.some((e) => e.alert && !acked.has(e.id))
-              return (
-                <article
-                  key={a.id}
-                  className={`site-card ${hot ? 'hot' : ''}`}
-                  onClick={() => pickAsset(a.id)}
-                  role="button"
-                  tabIndex={0}
+      <div className="ops-chrome-stack">
+        {workspace === 'monitor' && (
+          <div className="menu-subnav">
+            <span className="menu-subnav-label">Monitor</span>
+            <div className="menu-subnav-group">
+              {[
+                ['live', 'Live'],
+                ['upcoming', 'Upcoming'],
+                ['history', 'History'],
+                ['saved', 'Saved Views'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={monitorWindow === id ? 'active' : ''}
+                  onClick={() => {
+                    setMonitorWindow(id)
+                    if (id === 'live') setTimeMode('live')
+                    if (id === 'upcoming') setTimeMode('forecast')
+                    if (id === 'history') setTimeMode('history')
+                  }}
                 >
-                  <div className="site-ring" aria-hidden>
-                    <i style={{ '--r': `${Math.min(100, a.radiusKm * 2.2)}%` }} />
-                  </div>
-                  <div className="site-body">
-                    <div className="meta">
-                      <span className={`chip ${a.criticality}`}>{a.criticality}</span>
-                      <span className="chip">{a.type}</span>
-                    </div>
-                    <h3>{a.name}</h3>
-                    <p>
-                      {a.city}, {a.country}
-                    </p>
-                    <div className="site-stats">
-                      <span>
-                        Fence <b>{a.radiusKm} km</b>
-                      </span>
-                      <span>
-                        Hits <b>{hits.length}</b>
-                      </span>
-                      <span className={hot ? 'hot' : ''}>
-                        <span className={`status-dot ${hot ? 'hot' : ''}`} />
-                        {hot ? 'Hot' : 'Quiet'}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="menu-subnav-group">
+              {['map', 'list', 'split'].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={presentation === id ? 'active' : ''}
+                  onClick={() => setPresentation(id)}
+                >
+                  {id === 'map' ? 'Map' : id === 'list' ? 'List' : 'Split'}
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+        <AlertsSummaryStrip
+          stats={alertStats}
+          activeFilter={stripFilter}
+          onFilter={setStripFilter}
+          windowLabel={TIME_WINDOW_LABELS[timeMode] || TIME_WINDOW_LABELS.live}
+        />
+        <div className="ops-meta-row">
+          <CoordStrip focusPoint={focusPoint} />
+          <RiskScoreRow event={selectedEvent} pool={indiaPool} />
         </div>
-      ) : (
-        <div className="ops">
+      </div>
+
+      <div className="ops">
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
             <GlobeMap
-              events={filtered}
-              assets={ASSETS}
+              events={globeEvents}
+              assets={GLOBE_ASSETS}
+              mapEvents={filtered}
+              mapAssets={INDIA_ASSETS}
               selected={selected}
               onSelect={(sel) => {
-                if (sel.type === 'event') pickEvent(sel.id)
-                if (sel.type === 'asset') pickAsset(sel.id)
+                if (!sel) {
+                  clearSelection()
+                  return
+                }
+                if (sel.type === 'event') pickEvent(sel.id, { map: true })
+                if (sel.type === 'asset') pickAsset(sel.id, { map: true })
               }}
               showRadiusFor={showRadius}
-              acked={acked}
               timeMode={timeMode}
-            />
+              mapMode={mapMode}
+              onMapMode={setMapMode}
+              scene={scene}
+              pulseEventId={scene.pulse ? DEMO.eventId : null}
+              highlightAssetId={scene.warehouse ? DEMO.assetId : null}
+            focusPoint={focusPoint}
+          />
           </Suspense>
 
           <SideRail
@@ -288,39 +455,32 @@ export default function App() {
             sevs={sevs}
             setCats={setCats}
             setSevs={setSevs}
-            affectsOnly={affectsOnly}
-            onAffects={() => {
-              setAffectsOnly((v) => !v)
-              setFeedMode((m) => (m === 'proximity' && affectsOnly ? 'geographical' : m))
-            }}
-            allEvents={enriched}
-            assets={ASSETS}
             filteredCount={filtered.length}
             latencyMs={latencyMs}
             log={log}
-            acked={acked}
-            onPickSite={pickAsset}
+            counts={{
+              live: counts.live,
+              forecast: counts.forecast,
+              geo: enriched.filter((e) => e.flag === 'IN' && e.category === 'geopolitical').length,
+              env: enriched.filter((e) => e.flag === 'IN' && e.category === 'environmental').length,
+              sec: enriched.filter((e) => e.flag === 'IN' && e.category === 'security').length,
+            }}
           />
 
           <EventFeed
             events={filtered}
-            mode={feedMode}
-            onMode={(m) => {
-              setFeedMode(m)
-              if (m === 'proximity') setAffectsOnly(true)
-              if (m === 'geographical') setAffectsOnly(false)
-            }}
             selectedId={selectedId}
-            onSelect={pickEvent}
+            onSelect={(id) => pickEvent(id, { map: true })}
             now={now}
             counts={counts}
             freshId={freshId}
-            acked={acked}
+            timeMode={timeMode}
+            emptyHint={emptyHint}
           />
 
           {toast && (
             <div className="wire-toast">
-              <span>ON WIRE</span>
+              <span>New</span>
               <b>{toast.title}</b>
               <em>{toast.place}</em>
             </div>
@@ -334,35 +494,22 @@ export default function App() {
               className="track"
               onClick={(e) => {
                 const x = e.nativeEvent.offsetX / e.currentTarget.clientWidth
-                if (x < 0.36) setTimeMode('history')
-                else if (x > 0.64) setTimeMode('forecast')
-                else setTimeMode('live')
+                setTimeMode(x > 0.5 ? 'forecast' : 'live')
               }}
             >
               <i className={`head ${timeMode}`} />
-              <span className="t0">−24h</span>
-              <span className="t1">now</span>
-              <span className="t2">+90d</span>
+              <span className="t0">now</span>
+              <span className="t2">+2d</span>
             </div>
             <div className="time-dock">
-              {['live', 'forecast', 'history'].map((m) => (
-                <button key={m} className={timeMode === m ? 'active' : ''} onClick={() => setTimeMode(m)}>
+              {['live', 'forecast'].map((m) => (
+                <button key={m} type="button" className={timeMode === m ? 'active' : ''} onClick={() => setTimeMode(m)}>
                   {m}
                 </button>
               ))}
             </div>
           </div>
         </div>
-      )}
-
-      {page === 'operations' && selectedEvent && (
-        <EventDetail
-          event={selectedEvent}
-          onClose={() => setSelectedId(null)}
-          acknowledged={acked}
-          onAck={ack}
-        />
-      )}
     </div>
   )
 }
