@@ -37,6 +37,7 @@ export default function App() {
   const [stripFilter, setStripFilter] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
   const [mapFocusNonce, setMapFocusNonce] = useState(0)
+  const [globeJumpNonce, setGlobeJumpNonce] = useState(0)
   const [workspace, setWorkspace] = useState('monitor')
   const [monitorWindow, setMonitorWindow] = useState('live')
   const [presentation, setPresentation] = useState('map')
@@ -219,9 +220,11 @@ export default function App() {
     setSelectedId(id)
     setSelectedAssetId(null)
     setPage('operations')
-    if (opts.map !== false) {
+    if (opts.map) {
       setMapMode('map')
       setMapFocusNonce((n) => n + 1)
+    } else {
+      setGlobeJumpNonce((n) => n + 1)
     }
   }
 
@@ -231,18 +234,19 @@ export default function App() {
     setSiteFilterId(id)
     setPage('operations')
     setFeedMode('proximity')
-    if (opts.map !== false) {
+    if (opts.map) {
       setMapMode('map')
       setMapFocusNonce((n) => n + 1)
+    } else {
+      setGlobeJumpNonce((n) => n + 1)
     }
   }
 
   const openFeedEvent = (id) => {
-    setMapMode('map')
-    setMapFocusNonce((n) => n + 1)
     setSelectedId(id)
     setSelectedAssetId(null)
     setPage('operations')
+    setGlobeJumpNonce((n) => n + 1)
   }
 
   useEffect(() => {
@@ -462,6 +466,7 @@ export default function App() {
               highlightAssetId={scene.warehouse ? DEMO.assetId : null}
               focusPoint={focusPoint}
               mapFocusNonce={mapFocusNonce}
+              globeJumpNonce={globeJumpNonce}
           />
           </Suspense>
 
