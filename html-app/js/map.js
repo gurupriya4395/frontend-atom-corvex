@@ -71,10 +71,17 @@ export class DeskMap {
   }
 
   setActive(on) {
+    const turningOn = on && !this.active
     this.active = on
-    if (on && this.ready) {
-      this.resize()
-      this.focusSelection()
+    if (!on) return
+    if (!this.map) this.boot()
+    if (turningOn) {
+      const focus = () => {
+        this.resize()
+        if (this.ready) this.focusSelection()
+      }
+      focus()
+      ;[80, 240, 480].forEach((ms) => setTimeout(focus, ms))
     }
   }
 

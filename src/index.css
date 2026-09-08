@@ -725,10 +725,19 @@ button { cursor: pointer; }
 }
 .bell.open, .bell.has { border-color: var(--fire); }
 
-.ops {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
+.app.view-map .globe-stage {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.app.view-map .map-stage {
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 5 !important;
+}
+.app.view-globe .map-stage {
+  pointer-events: none;
 }
 
 .view-toggle {
@@ -771,11 +780,17 @@ button { cursor: pointer; }
   height: 100%;
   pointer-events: none;
 }
-.globe-stage.off,
-.map-stage.off {
+.globe-stage.off {
   display: none;
   visibility: hidden;
   pointer-events: none;
+}
+/* Keep map laid out while hidden so MapLibre can boot; feed clicks can then show it immediately. */
+.map-stage.off {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 .globe-stage.on {
   display: block;

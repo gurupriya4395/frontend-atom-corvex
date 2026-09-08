@@ -50,6 +50,8 @@ const state = {
 let globe = null
 let deskMap = null
 let cueTimers = []
+let forceGlobeFly = false
+let lastGlobeFlyKey = ''
 
 const $ = (sel) => document.querySelector(sel)
 
@@ -256,15 +258,25 @@ function renderFeed(d) {
     })
     .join('')
   $('#event-cards').querySelectorAll('.card').forEach((btn) => {
-    btn.onclick = () => pickEvent(btn.dataset.id, { map: true })
+    btn.onclick = () => {
+      forceGlobeFly = true
+      pickEvent(btn.dataset.id)
+    }
   })
 }
 
 function renderMaps(d) {
   const wrap = $('#map-wrap')
   wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery' : 'is-satellite'}`
+  document.body.classList.toggle('view-map', state.mapMode === 'map')
+  document.body.classList.toggle('view-globe', state.mapMode !== 'map')
+  document.querySelector('.app')?.classList.toggle('view-map', state.mapMode === 'map')
+  document.querySelector('.app')?.classList.toggle('view-globe', state.mapMode !== 'map')
   $('#globe-stage').className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
   $('#map-stage').className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
+  $('#globe-stage').style.display = state.mapMode === 'globe' ? 'block' : 'none'
+  $('#map-stage').style.display = state.mapMode === 'map' ? 'block' : 'none'
+  $('#map-stage').style.visibility = state.mapMode === 'map' ? 'visible' : 'hidden'
   $('#btn-globe').classList.toggle('active', state.mapMode === 'globe')
   $('#btn-map').classList.toggle('active', state.mapMode === 'map')
   $('#globe-tools').hidden = state.mapMode !== 'globe'
@@ -276,12 +288,20 @@ function renderMaps(d) {
   globe?.setData({ events: d.filtered, assets: GLOBE_ASSETS, showRadiusFor: d.showRadiusFor, pulseEventId, highlightAssetId })
   if (state.mapMode === 'globe') {
     globe?.resize()
-    if (pulseEventId && !d.selected) {
-      const ev = d.filtered.find((e) => e.id === pulseEventId)
-      if (ev) globe.flyTo(ev.coords[1], ev.coords[0], false)
-    } else if (d.selected) {
-      const target = d.selected.type === 'event' ? d.filtered.find((e) => e.id === d.selected.id) : GLOBE_ASSETS.find((a) => a.id === d.selected.id)
-      if (target) globe.flyTo(target.coords[1], target.coords[0], d.selected.type === 'asset' || Boolean(d.showRadiusFor))
+    const flyKey = d.selected ? `${d.selected.type}:${d.selected.id}` : pulseEventId ? `pulse:${pulseEventId}` : ''
+    if (forceGlobeFly || (flyKey && flyKey !== lastGlobeFlyKey)) {
+      forceGlobeFly = false
+      lastGlobeFlyKey = flyKey
+      if (pulseEventId && !d.selected) {
+        const ev = d.filtered.find((e) => e.id === pulseEventId)
+        if (ev?.coords) globe.flyTo(ev.coords[1], ev.coords[0], true)
+      } else if (d.selected) {
+        const target =
+          d.selected.type === 'event'
+            ? d.filtered.find((e) => e.id === d.selected.id)
+            : GLOBE_ASSETS.find((a) => a.id === d.selected.id)
+        if (target?.coords) globe.flyTo(target.coords[1], target.coords[0], true)
+      }
     }
     const pov = globe?.pointOfView()
     if (pov) {

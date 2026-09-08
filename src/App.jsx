@@ -36,6 +36,8 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [stripFilter, setStripFilter] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
+  const [mapFocusNonce, setMapFocusNonce] = useState(0)
+  const [globeJumpNonce, setGlobeJumpNonce] = useState(0)
   const [workspace, setWorkspace] = useState('monitor')
   const [monitorWindow, setMonitorWindow] = useState('live')
   const [presentation, setPresentation] = useState('map')
@@ -218,7 +220,12 @@ export default function App() {
     setSelectedId(id)
     setSelectedAssetId(null)
     setPage('operations')
-    if (opts.map) setMapMode('map')
+    if (opts.map) {
+      setMapMode('map')
+      setMapFocusNonce((n) => n + 1)
+    } else {
+      setGlobeJumpNonce((n) => n + 1)
+    }
   }
 
   const pickAsset = (id, opts = {}) => {
@@ -227,7 +234,19 @@ export default function App() {
     setSiteFilterId(id)
     setPage('operations')
     setFeedMode('proximity')
-    if (opts.map) setMapMode('map')
+    if (opts.map) {
+      setMapMode('map')
+      setMapFocusNonce((n) => n + 1)
+    } else {
+      setGlobeJumpNonce((n) => n + 1)
+    }
+  }
+
+  const openFeedEvent = (id) => {
+    setSelectedId(id)
+    setSelectedAssetId(null)
+    setPage('operations')
+    setGlobeJumpNonce((n) => n + 1)
   }
 
   useEffect(() => {
@@ -305,7 +324,7 @@ export default function App() {
   }, [enriched])
 
   return (
-    <div className="app">
+    <div className={`app ${mapMode === 'map' ? 'view-map' : 'view-globe'}`}>
       {boot && (
         <div className="boot">
           <div className="boot-inner">
@@ -445,7 +464,9 @@ export default function App() {
               scene={scene}
               pulseEventId={scene.pulse ? DEMO.eventId : null}
               highlightAssetId={scene.warehouse ? DEMO.assetId : null}
-            focusPoint={focusPoint}
+              focusPoint={focusPoint}
+              mapFocusNonce={mapFocusNonce}
+              globeJumpNonce={globeJumpNonce}
           />
           </Suspense>
 
@@ -470,7 +491,7 @@ export default function App() {
           <EventFeed
             events={filtered}
             selectedId={selectedId}
-            onSelect={(id) => pickEvent(id, { map: true })}
+            onSelect={openFeedEvent}
             now={now}
             counts={counts}
             freshId={freshId}

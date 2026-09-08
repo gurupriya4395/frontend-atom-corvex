@@ -22,6 +22,8 @@ export default function GlobeMap({
   pulseEventId,
   highlightAssetId,
   focusPoint = null,
+  mapFocusNonce = 0,
+  globeJumpNonce = 0,
 }) {
   const mode = mapMode
   const setMode = (m) => onMapMode?.(m)
@@ -89,18 +91,18 @@ export default function GlobeMap({
     world.setAutoRotate(false)
     if (pulseEventId && !selected) {
       const ev = events.find((e) => e.id === pulseEventId)
-      if (ev) world.flyTo(ev.coords[1], ev.coords[0], false)
+      if (ev?.coords) world.flyTo(ev.coords[1], ev.coords[0], true)
       return
     }
     if (!selected) return
+    const pool = events?.length ? events : mapEvents
     const target =
       selected.type === 'event'
-        ? events.find((e) => e.id === selected.id)
+        ? pool?.find((e) => e.id === selected.id)
         : assets.find((a) => a.id === selected.id)
-    if (!target) return
-    const close = selected.type === 'asset' || Boolean(showRadiusFor)
-    world.flyTo(target.coords[1], target.coords[0], close)
-  }, [selected, events, assets, mode, showRadiusFor, pulseEventId])
+    if (!target?.coords) return
+    world.flyTo(target.coords[1], target.coords[0], true)
+  }, [selected?.id, selected?.type, globeJumpNonce, mode, pulseEventId])
 
   useEffect(() => {
     worldRef.current?.setAutoRotate(false)
@@ -133,8 +135,15 @@ export default function GlobeMap({
         <i className="c bl" />
         <i className="c br" />
       </div>
-      <div className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`} ref={hostRef} />
-      <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
+      <div
+        className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`}
+        ref={hostRef}
+        style={{ display: mode === 'globe' ? 'block' : 'none' }}
+      />
+      <div
+        className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}
+        style={{ display: mode === 'map' ? 'block' : 'none', visibility: mode === 'map' ? 'visible' : 'hidden' }}
+      >
         {MapView && (
           <MapView
             events={mapEvents || events}
@@ -147,6 +156,7 @@ export default function GlobeMap({
             highlightAssetId={highlightAssetId}
             focusPoint={focusPoint}
             active={mode === 'map'}
+            focusNonce={mapFocusNonce}
           />
         )}
       </div>
@@ -433,8 +443,8 @@ function createWorld(el, getOnSelect) {
   })
 
   const flyTo = (lat, lng, close = false) => {
-    const alt = close ? 0.85 : 1.85
-    animateCamera(latLngToVec3(lat, lng, alt), 1400)
+    const alt = close ? 0.55 : 1.85
+    animateCamera(latLngToVec3(lat, lng, alt), 1100)
   }
 
   const zoomOut = () => {
