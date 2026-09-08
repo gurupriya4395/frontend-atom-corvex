@@ -22,6 +22,7 @@ export default function GlobeMap({
   pulseEventId,
   highlightAssetId,
   focusPoint = null,
+  mapFocusNonce = 0,
 }) {
   const mode = mapMode
   const setMode = (m) => onMapMode?.(m)
@@ -147,6 +148,7 @@ export default function GlobeMap({
             highlightAssetId={highlightAssetId}
             focusPoint={focusPoint}
             active={mode === 'map'}
+            focusNonce={mapFocusNonce}
           />
         )}
       </div>

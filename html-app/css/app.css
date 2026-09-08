@@ -771,11 +771,16 @@ button { cursor: pointer; }
   height: 100%;
   pointer-events: none;
 }
-.globe-stage.off,
-.map-stage.off {
+.globe-stage.off {
   display: none;
   visibility: hidden;
   pointer-events: none;
+}
+.map-stage.off {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 .globe-stage.on {
   display: block;

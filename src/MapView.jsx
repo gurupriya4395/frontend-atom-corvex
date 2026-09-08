@@ -47,6 +47,7 @@ export default function MapView({
   highlightAssetId,
   focusPoint = null,
   active = true,
+  focusNonce = 0,
 }) {
   const wrapRef = useRef(null)
   const hudRef = useRef(null)
@@ -266,7 +267,7 @@ export default function MapView({
     focus()
     const later = [80, 240, 480].map((ms) => setTimeout(focus, ms))
     return () => later.forEach(clearTimeout)
-  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready, active])
+  }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready, active, focusNonce])
 
   useEffect(() => {
     if (!active) return

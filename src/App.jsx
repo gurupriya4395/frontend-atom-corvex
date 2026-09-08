@@ -36,6 +36,7 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [stripFilter, setStripFilter] = useState(null)
   const [mapMode, setMapMode] = useState('globe')
+  const [mapFocusNonce, setMapFocusNonce] = useState(0)
   const [workspace, setWorkspace] = useState('monitor')
   const [monitorWindow, setMonitorWindow] = useState('live')
   const [presentation, setPresentation] = useState('map')
@@ -218,7 +219,10 @@ export default function App() {
     setSelectedId(id)
     setSelectedAssetId(null)
     setPage('operations')
-    if (opts.map) setMapMode('map')
+    if (opts.map) {
+      setMapMode('map')
+      setMapFocusNonce((n) => n + 1)
+    }
   }
 
   const pickAsset = (id, opts = {}) => {
@@ -227,7 +231,10 @@ export default function App() {
     setSiteFilterId(id)
     setPage('operations')
     setFeedMode('proximity')
-    if (opts.map) setMapMode('map')
+    if (opts.map) {
+      setMapMode('map')
+      setMapFocusNonce((n) => n + 1)
+    }
   }
 
   useEffect(() => {
@@ -445,7 +452,8 @@ export default function App() {
               scene={scene}
               pulseEventId={scene.pulse ? DEMO.eventId : null}
               highlightAssetId={scene.warehouse ? DEMO.assetId : null}
-            focusPoint={focusPoint}
+              focusPoint={focusPoint}
+              mapFocusNonce={mapFocusNonce}
           />
           </Suspense>
 
