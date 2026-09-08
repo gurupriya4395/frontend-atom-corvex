@@ -219,7 +219,7 @@ export default function App() {
     setSelectedId(id)
     setSelectedAssetId(null)
     setPage('operations')
-    if (opts.map) {
+    if (opts.map !== false) {
       setMapMode('map')
       setMapFocusNonce((n) => n + 1)
     }
@@ -231,10 +231,18 @@ export default function App() {
     setSiteFilterId(id)
     setPage('operations')
     setFeedMode('proximity')
-    if (opts.map) {
+    if (opts.map !== false) {
       setMapMode('map')
       setMapFocusNonce((n) => n + 1)
     }
+  }
+
+  const openFeedEvent = (id) => {
+    setMapMode('map')
+    setMapFocusNonce((n) => n + 1)
+    setSelectedId(id)
+    setSelectedAssetId(null)
+    setPage('operations')
   }
 
   useEffect(() => {
@@ -312,7 +320,7 @@ export default function App() {
   }, [enriched])
 
   return (
-    <div className="app">
+    <div className={`app ${mapMode === 'map' ? 'view-map' : 'view-globe'}`}>
       {boot && (
         <div className="boot">
           <div className="boot-inner">
@@ -478,7 +486,7 @@ export default function App() {
           <EventFeed
             events={filtered}
             selectedId={selectedId}
-            onSelect={(id) => pickEvent(id, { map: true })}
+            onSelect={openFeedEvent}
             now={now}
             counts={counts}
             freshId={freshId}

@@ -134,8 +134,15 @@ export default function GlobeMap({
         <i className="c bl" />
         <i className="c br" />
       </div>
-      <div className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`} ref={hostRef} />
-      <div className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}>
+      <div
+        className={`globe-stage ${mode === 'globe' ? 'on' : 'off'}`}
+        ref={hostRef}
+        style={{ display: mode === 'globe' ? 'block' : 'none' }}
+      />
+      <div
+        className={`map-stage ${mode === 'map' ? 'on' : 'off'}`}
+        style={{ display: mode === 'map' ? 'block' : 'none', visibility: mode === 'map' ? 'visible' : 'hidden' }}
+      >
         {MapView && (
           <MapView
             events={mapEvents || events}

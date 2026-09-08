@@ -263,8 +263,15 @@ function renderFeed(d) {
 function renderMaps(d) {
   const wrap = $('#map-wrap')
   wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery' : 'is-satellite'}`
+  document.body.classList.toggle('view-map', state.mapMode === 'map')
+  document.body.classList.toggle('view-globe', state.mapMode !== 'map')
+  document.querySelector('.app')?.classList.toggle('view-map', state.mapMode === 'map')
+  document.querySelector('.app')?.classList.toggle('view-globe', state.mapMode !== 'map')
   $('#globe-stage').className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
   $('#map-stage').className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
+  $('#globe-stage').style.display = state.mapMode === 'globe' ? 'block' : 'none'
+  $('#map-stage').style.display = state.mapMode === 'map' ? 'block' : 'none'
+  $('#map-stage').style.visibility = state.mapMode === 'map' ? 'visible' : 'hidden'
   $('#btn-globe').classList.toggle('active', state.mapMode === 'globe')
   $('#btn-map').classList.toggle('active', state.mapMode === 'map')
   $('#globe-tools').hidden = state.mapMode !== 'globe'

@@ -725,10 +725,19 @@ button { cursor: pointer; }
 }
 .bell.open, .bell.has { border-color: var(--fire); }
 
-.ops {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
+.app.view-map .globe-stage {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.app.view-map .map-stage {
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 5 !important;
+}
+.app.view-globe .map-stage {
+  pointer-events: none;
 }
 
 .view-toggle {
