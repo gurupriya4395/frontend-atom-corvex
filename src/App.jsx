@@ -9,7 +9,6 @@ import { DESK_BEATS } from './sequence'
 import { enrich, clock, searchHay } from './scoring'
 import { fmtLat, fmtLng } from './coords'
 import { VIEW_LABELS, TIME_WINDOW_LABELS, WORKSPACE_LABELS } from './labels'
-import UpcomingBoard from './upcoming/UpcomingBoard'
 import './index.css'
 import './markers.css'
 import './nav.css'
@@ -46,7 +45,6 @@ export default function App() {
     warehouse: false,
     distance: false,
   })
-  const [mapFocusOverride, setMapFocusOverride] = useState(null)
   const searchRef = useRef(null)
   const cueTimers = useRef([])
 
@@ -193,25 +191,21 @@ export default function App() {
       : selectedAssetId
 
   const selectedAsset = selectedAssetId ? ASSETS.find((a) => a.id === selectedAssetId) : null
-  const focusPoint = mapFocusOverride
-    ? mapFocusOverride
-    : selectedEvent?.coords
+  const focusPoint = selectedEvent?.coords
+    ? {
+        lat: selectedEvent.coords[1],
+        lng: selectedEvent.coords[0],
+        label: selectedEvent.place?.split(',')[0] || selectedEvent.title,
+        type: 'event',
+      }
+    : selectedAsset?.coords
       ? {
-          lat: selectedEvent.coords[1],
-          lng: selectedEvent.coords[0],
-          label: selectedEvent.place?.split(',')[0] || selectedEvent.title,
-          type: 'event',
+          lat: selectedAsset.coords[1],
+          lng: selectedAsset.coords[0],
+          label: selectedAsset.name,
+          type: 'asset',
         }
-      : selectedAsset?.coords
-        ? {
-            lat: selectedAsset.coords[1],
-            lng: selectedAsset.coords[0],
-            label: selectedAsset.name,
-            type: 'asset',
-          }
-        : null
-
-  const showUpcoming = workspace === 'monitor' && monitorWindow === 'upcoming'
+      : null
 
   const emptyHint = (() => {
     if (!catsOn || !sevsOn) return 'Turn a Desk or Weight chip back on.'
@@ -223,32 +217,8 @@ export default function App() {
   const pickEvent = (id, opts = {}) => {
     setSelectedId(id)
     setSelectedAssetId(null)
-    setMapFocusOverride(null)
     setPage('operations')
     if (opts.map) setMapMode('map')
-  }
-
-  const viewUpcomingOnMap = (event) => {
-    const coords = event.coords || event.rawEvent?.coords
-    if (!Array.isArray(coords) || coords.length < 2) return
-    setMapFocusOverride({
-      lat: coords[1],
-      lng: coords[0],
-      label: event.place?.split(',')[0] || event.title,
-      type: 'event',
-    })
-    const liveId = event.rawEvent?.id
-    if (liveId && enriched.some((e) => e.id === liveId)) {
-      setSelectedId(liveId)
-      setSelectedAssetId(null)
-    } else {
-      setSelectedId(null)
-      setSelectedAssetId(null)
-    }
-    setMapMode('map')
-    setMonitorWindow('live')
-    setTimeMode('live')
-    setPage('operations')
   }
 
   const pickAsset = (id, opts = {}) => {
@@ -320,7 +290,6 @@ export default function App() {
         searchRef.current?.focus()
       }
       if (e.key === 'Escape') {
-        if (monitorWindow === 'upcoming') return
         clearCueTimers()
         resetScene()
         setSelectedId(null)
@@ -333,10 +302,10 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [enriched, monitorWindow])
+  }, [enriched])
 
   return (
-    <div className={`app ${showUpcoming ? 'upcoming-open' : ''}`}>
+    <div className="app">
       {boot && (
         <div className="boot">
           <div className="boot-inner">
@@ -427,41 +396,32 @@ export default function App() {
                 </button>
               ))}
             </div>
-            {monitorWindow !== 'upcoming' && (
-              <div className="menu-subnav-group">
-                {['map', 'list', 'split'].map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={presentation === id ? 'active' : ''}
-                    onClick={() => setPresentation(id)}
-                  >
-                    {id === 'map' ? 'Map' : id === 'list' ? 'List' : 'Split'}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="menu-subnav-group">
+              {['map', 'list', 'split'].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={presentation === id ? 'active' : ''}
+                  onClick={() => setPresentation(id)}
+                >
+                  {id === 'map' ? 'Map' : id === 'list' ? 'List' : 'Split'}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <AlertsSummaryStrip
           stats={alertStats}
           activeFilter={stripFilter}
           onFilter={setStripFilter}
-          windowLabel={
-            showUpcoming ? 'Upcoming' : TIME_WINDOW_LABELS[timeMode] || TIME_WINDOW_LABELS.live
-          }
+          windowLabel={TIME_WINDOW_LABELS[timeMode] || TIME_WINDOW_LABELS.live}
         />
-        {!showUpcoming && (
-          <div className="ops-meta-row">
-            <CoordStrip focusPoint={focusPoint} />
-            <RiskScoreRow event={selectedEvent} pool={indiaPool} />
-          </div>
-        )}
+        <div className="ops-meta-row">
+          <CoordStrip focusPoint={focusPoint} />
+          <RiskScoreRow event={selectedEvent} pool={indiaPool} />
+        </div>
       </div>
 
-      {showUpcoming ? (
-        <UpcomingBoard liveEnriched={enriched} onViewMap={viewUpcomingOnMap} />
-      ) : (
       <div className="ops">
           <Suspense fallback={<div className="map-wrap globe-msg">Raising the globe…</div>}>
             <GlobeMap
@@ -550,7 +510,6 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
     </div>
   )
 }

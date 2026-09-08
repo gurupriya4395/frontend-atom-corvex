@@ -30,9 +30,6 @@
   --desk-offset: calc(var(--topbar-h) + var(--chrome-stack-h));
   font-synthesis: none;
 }
-.app.upcoming-open {
-  --chrome-stack-h: 96px;
-}
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
