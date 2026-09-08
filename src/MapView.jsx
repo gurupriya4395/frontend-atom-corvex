@@ -269,6 +269,17 @@ export default function MapView({
   }, [selected?.id, selected?.type, scene.flood, scene.distance, scene.warehouse, ready, active])
 
   useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready || !active || !focusPoint) return
+    map.flyTo({
+      center: [focusPoint.lng, focusPoint.lat],
+      zoom: 12,
+      duration: 900,
+      essential: true,
+    })
+  }, [focusPoint, ready, active])
+
+  useEffect(() => {
     if (!active) return
     const map = mapRef.current
     const t = [40, 160, 400].map((ms) =>
