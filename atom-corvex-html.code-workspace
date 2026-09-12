@@ -1,0 +1,14 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Atom Corvex HTML"
+    }
+  ],
+  "settings": {
+    "workbench.sideBar.location": "left",
+    "files.exclude": {
+      "**/node_modules": true
+    }
+  }
+}
