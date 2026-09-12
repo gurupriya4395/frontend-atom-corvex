@@ -183,7 +183,7 @@ export function createGlobe(hostEl, getOnSelect) {
       const lng = ((Math.atan2(p.z, -p.x) * 180) / Math.PI) - 180
       return { lat, lng, alt: p.length() / R }
     },
-    flyTo: (lat, lng, close = false) => animateCamera(latLngToVec3(lat, lng, close ? 0.85 : 1.85), 1400),
+    flyTo: (lat, lng, close = false) => animateCamera(latLngToVec3(lat, lng, close ? 0.55 : 1.85), 1100),
     zoomOut: () => {
       cancelFly()
       controls.enabled = true

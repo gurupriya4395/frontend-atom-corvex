@@ -8,12 +8,13 @@ export default defineConfig({
   root: dir,
   server: {
     host: '0.0.0.0',
-    port: 5174,
+    port: 5173,
+    strictPort: true,
     allowedHosts: true,
   },
   preview: {
     host: true,
-    port: 4174,
+    port: 4173,
     allowedHosts: true,
   },
 })
