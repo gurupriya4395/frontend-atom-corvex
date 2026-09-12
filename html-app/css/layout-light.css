@@ -317,6 +317,10 @@
   color: #4f46e5;
 }
 
+.layout-mission .hud {
+  opacity: 1;
+}
+
 .layout-mission .hud .legend {
   background: rgba(255, 255, 255, 0.94);
   border-color: #e2e8f0;
