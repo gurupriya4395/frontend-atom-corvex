@@ -2,7 +2,7 @@ import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './da
 import { DESK_BEATS } from './sequence.js'
 import { enrich, clock, searchHay } from './scoring.js'
 import { fmtLat, fmtLng, fmtPair } from './coords.js'
-import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS, WORKSPACE_LABELS } from './labels.js'
+import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS } from './labels.js'
 import { eventMarkerHtml } from './markers.js'
 import { createGlobe } from './globe.js'
 import { DeskMap } from './map.js'
@@ -134,30 +134,27 @@ function clearSelection() {
 
 function renderChrome(d) {
   const coords = $('#topbar-coords')
-  if (d.focusPoint) {
-    coords.innerHTML = `<span class="topbar-coords-label">${d.focusPoint.label}</span><span class="topbar-coords-val"><em>Lat</em> ${fmtLat(d.focusPoint.lat)}</span><span class="topbar-coords-val"><em>Long</em> ${fmtLng(d.focusPoint.lng)}</span>`
-  } else {
-    coords.innerHTML = `<span class="topbar-coords-hint">Select an event or site to see coordinates</span>`
+  if (coords) {
+    if (d.focusPoint) {
+      coords.innerHTML = `<span class="topbar-coords-label">${d.focusPoint.label}</span><span class="topbar-coords-val"><em>Lat</em> ${fmtLat(d.focusPoint.lat)}</span><span class="topbar-coords-val"><em>Long</em> ${fmtLng(d.focusPoint.lng)}</span>`
+    } else {
+      coords.innerHTML = `<span class="topbar-coords-hint">Select an event or site to see coordinates</span>`
+    }
   }
-  $('#ops-clock').textContent = clock(Date.now())
+  if ($('#ops-clock')) $('#ops-clock').textContent = clock(Date.now())
 
-  document.querySelectorAll('.menu-nav button').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.workspace === state.workspace)
+  document.querySelectorAll('.nav-tabs button').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('.nav-tabs button').forEach((b) => b.classList.remove('active'))
+      btn.classList.add('active')
+    }
   })
-  document.querySelectorAll('.monitor-windows button').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.window === state.monitorWindow)
+  document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === state.timeMode)
   })
-  document.querySelectorAll('.monitor-present button').forEach((btn) => {
+  document.querySelectorAll('.view-cluster button[data-present]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.present === state.presentation)
   })
-  const note = $('#workspace-note')
-  if (note) {
-    const text = WORKSPACE_LABELS[state.workspace] || ''
-    note.textContent = text
-    note.hidden = !text
-  }
-  const monitorBar = $('#monitor-bar')
-  if (monitorBar) monitorBar.hidden = state.workspace !== 'monitor'
   if ($('#view-badge')) $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
 
   const stats = {
@@ -183,10 +180,12 @@ function renderChrome(d) {
   })
 
   const coordStrip = $('#coord-strip')
-  if (d.focusPoint) {
-    coordStrip.innerHTML = `<div class="coord-strip-head"><span class="coord-strip-tag">${FOCUS_TYPE_LABELS[d.focusPoint.type]}</span><span class="coord-strip-name">${d.focusPoint.label}</span></div><div class="coord-strip-geo"><div class="coord-strip-cell"><span>Latitude</span><strong>${fmtLat(d.focusPoint.lat)}</strong></div><div class="coord-strip-cell"><span>Longitude</span><strong>${fmtLng(d.focusPoint.lng)}</strong></div><div class="coord-strip-cell dd"><span>Coordinates</span><strong>${fmtPair(d.focusPoint.lat, d.focusPoint.lng)}</strong></div></div>`
-  } else {
-    coordStrip.innerHTML = `<span class="coord-strip-empty">Select an event or site to view coordinates</span>`
+  if (coordStrip) {
+    if (d.focusPoint) {
+      coordStrip.innerHTML = `<div class="coord-strip-head"><span class="coord-strip-tag">${FOCUS_TYPE_LABELS[d.focusPoint.type]}</span><span class="coord-strip-name">${d.focusPoint.label}</span></div><div class="coord-strip-geo"><div class="coord-strip-cell"><span>Latitude</span><strong>${fmtLat(d.focusPoint.lat)}</strong></div><div class="coord-strip-cell"><span>Longitude</span><strong>${fmtLng(d.focusPoint.lng)}</strong></div><div class="coord-strip-cell dd"><span>Coordinates</span><strong>${fmtPair(d.focusPoint.lat, d.focusPoint.lng)}</strong></div></div>`
+    } else {
+      coordStrip.innerHTML = `<span class="coord-strip-empty">Select an event or site to view coordinates</span>`
+    }
   }
 
   const risk = $('#risk-row')
@@ -282,7 +281,7 @@ function renderMaps(d) {
   if (state.mapMode === 'globe') {
     globe?.resize()
     const flyKey = d.selected ? `${d.selected.type}:${d.selected.id}` : pulseEventId ? `pulse:${pulseEventId}` : ''
-    if (forceGlobeFly || (flyKey && flyKey !== lastGlobeFlyKey)) {
+    if (forceGlobeFly) {
       forceGlobeFly = false
       lastGlobeFlyKey = flyKey
       if (pulseEventId && !d.selected) {
@@ -295,6 +294,8 @@ function renderMaps(d) {
             : GLOBE_ASSETS.find((a) => a.id === d.selected.id)
         if (target?.coords) globe.flyTo(target.coords[1], target.coords[0], true)
       }
+    } else if (flyKey) {
+      lastGlobeFlyKey = flyKey
     }
     const pov = globe?.pointOfView()
     if (pov) {
@@ -387,10 +388,12 @@ export function initApp() {
   globe = createGlobe($('#globe-stage'), (sel) => {
     if (!sel) {
       clearSelection()
+      globe?.zoomOut()
       return
     }
-    if (sel.type === 'event') pickEvent(sel.id, { map: true })
-    if (sel.type === 'asset') pickAsset(sel.id, { map: true })
+    forceGlobeFly = true
+    if (sel.type === 'event') pickEvent(sel.id)
+    if (sel.type === 'asset') pickAsset(sel.id)
   })
   new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
   setInterval(() => {
@@ -417,7 +420,7 @@ export function initApp() {
       if (d.filtered[0]) pickEvent(d.filtered[0].id)
     }
   })
-  $('#btn-demo').onclick = runDesk
+  if ($('#btn-demo')) $('#btn-demo').onclick = runDesk
   $('#btn-replay').onclick = runDesk
   $('#btn-globe').onclick = () => {
     state.mapMode = 'globe'
@@ -428,26 +431,21 @@ export function initApp() {
     deskMap.boot()
     render()
   }
-  document.querySelectorAll('.menu-nav button').forEach((btn) => {
+  document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      state.workspace = btn.dataset.workspace
+      state.timeMode = btn.dataset.mode
+      if (btn.dataset.mode === 'live') state.monitorWindow = 'live'
+      if (btn.dataset.mode === 'forecast') state.monitorWindow = 'upcoming'
+      if (btn.dataset.mode === 'history') state.monitorWindow = 'history'
       render()
     })
   })
-  document.querySelectorAll('.monitor-windows button').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.monitorWindow = btn.dataset.window
-      if (btn.dataset.window === 'live') state.timeMode = 'live'
-      if (btn.dataset.window === 'upcoming') state.timeMode = 'forecast'
-      if (btn.dataset.window === 'history') state.timeMode = 'history'
-      render()
-    })
-  })
-  document.querySelectorAll('.monitor-present button').forEach((btn) => {
+  document.querySelectorAll('.view-cluster button[data-present]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.presentation = btn.dataset.present
       if (btn.dataset.present === 'map') {
-        /* keep current globe/map; no panel layout change */
+        state.mapMode = 'map'
+        deskMap.boot()
       }
       render()
     })

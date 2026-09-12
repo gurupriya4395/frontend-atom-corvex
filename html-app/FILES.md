@@ -1,8 +1,8 @@
-# HTML / CSS / JS files for localhost:5173
+# HTML / CSS / JS files for localhost:5174
 
-The app at **http://localhost:5173/** is this HTML folder.
+The app at **http://localhost:5174/** is this HTML folder.
 
-| What you see on :5173 | File |
+| What you see on :5174 | File |
 |----------------------|------|
 | Page layout | `index.html` |
 | All styles | `css/app.css` |
