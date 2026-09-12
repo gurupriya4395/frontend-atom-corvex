@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --config html-app/vite.config.js",
     "dev:html": "vite --config html-app/vite.config.js",
-    "dev:react": "vite",
+    "dev:react": "vite --config vite.react.config.js",
     "build:html": "vite build --config html-app/vite.config.js",
-    "build": "vite build",
+    "build": "vite build --config html-app/vite.config.js",
+    "build:react": "vite build --config vite.react.config.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },

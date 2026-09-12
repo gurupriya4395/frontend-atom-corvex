@@ -1,19 +1,16 @@
 import { defineConfig } from 'vite'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const dir = path.dirname(fileURLToPath(import.meta.url))
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  root: dir,
+  plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 5175,
     allowedHosts: true,
   },
   preview: {
     host: true,
-    port: 4173,
+    port: 4175,
     allowedHosts: true,
   },
 })

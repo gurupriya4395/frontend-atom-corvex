@@ -1,16 +1,11 @@
-# Atom Corvex — HTML (matches localhost:5173)
+# Atom Corvex — HTML / CSS / JS
 
-This folder is the **same UI** as the React app on http://localhost:5173
-(dark ops top bar, summary strip, globe, filters, proximity feed).
+This is the **default app** at **http://localhost:5173**.
 
-## Run (from repo root)
+It matches the operations desk: dark top bar, Monitor subnav, summary strip, globe, filters, proximity feed.
 
 ```bash
-git pull origin cursor/globe-pins-light-bg-a1f5
-npm install
 npm run dev
 ```
 
 Open **http://localhost:5173**
-
-Do not open `html-prototype/` — that is an old mock, not this app.
