@@ -1,6 +1,6 @@
 # ATOM-CORVEX Operations
 
-http://localhost:5173 is the **HTML / CSS / JS** operations desk (same UI as the former React screen: dark top bar, summary, globe, filters, proximity feed).
+http://localhost:5173 is the **HTML / CSS / JS** operations desk (light mission chrome, full 3D globe, filters, proximity feed).
 
 ## Run
 

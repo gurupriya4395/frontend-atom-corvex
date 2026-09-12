@@ -2,7 +2,7 @@
 
 This is the **default app** at **http://localhost:5173**.
 
-It matches the operations desk: dark top bar, Monitor subnav, summary strip, globe, filters, proximity feed.
+It matches the light mission desk: Critical Events nav, full 3D globe, filters, proximity feed.
 
 ```bash
 npm run dev

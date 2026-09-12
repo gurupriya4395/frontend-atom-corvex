@@ -7,10 +7,12 @@ const R = 100
 
 export function createGlobe(hostEl, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#070b10')
+  scene.background = new THREE.Color('#e8edf4')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
-  camera.position.set(0, 60, 320)
+  const home = latLngToVec3(18, 78, 2.2)
+  camera.position.copy(home)
+  camera.lookAt(0, 0, 0)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
@@ -188,7 +190,7 @@ export function createGlobe(hostEl, getOnSelect) {
       cancelFly()
       controls.enabled = true
       controls.target.set(0, 0, 0)
-      animateCamera(new THREE.Vector3(0, 90, 320), 900, { lockControls: false })
+      animateCamera(home.clone(), 900, { lockControls: false })
     },
     setPaused: (on) => {
       paused = on
