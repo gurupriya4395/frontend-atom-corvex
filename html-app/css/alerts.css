@@ -1,7 +1,7 @@
 /* Palantir Gotham + military satellite tasking chrome */
 
 .layout-mission {
-  --icon-rail-w: 48px;
+  --icon-rail-w: 44px;
   --gotham-bg: #07110c;
   --gotham-panel: #0c1812;
   --gotham-panel-2: #122018;
@@ -44,39 +44,39 @@
 
 .ops-icon-rail {
   position: absolute;
-  top: var(--desk-offset);
+  top: 0;
   left: 0;
-  bottom: var(--map-bottom);
+  bottom: 0;
   width: var(--icon-rail-w);
-  z-index: 22;
+  z-index: 40;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 0;
-  background: var(--gotham-bg);
-  border-right: 1px solid #0a0e13;
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
+  gap: 2px;
+  padding: 10px 0 12px;
+  background: #12171f;
+  border-right: 1px solid #1a222c;
+  box-shadow: none;
 }
 
 .ops-icon-btn {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 5px;
   background: transparent;
-  color: var(--gotham-muted);
+  color: #8b95a2;
   display: grid;
   place-items: center;
 }
 
 .ops-icon-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   stroke: currentColor;
   fill: none;
-  stroke-width: 1.6;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -90,35 +90,25 @@
 }
 
 .ops-icon-btn:hover {
-  color: var(--gotham-text);
-  background: rgba(255, 255, 255, 0.05);
+  color: #dce3ec;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .ops-icon-btn.active {
-  color: var(--gotham-ice);
-  background: rgba(126, 184, 212, 0.12);
-}
-
-.ops-icon-btn.active::before {
-  content: '';
-  position: absolute;
-  left: -4px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--gotham-gold);
+  color: #f3f6fa;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .ops-icon-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 1px;
   min-width: 14px;
   height: 14px;
   padding: 0 3px;
   border-radius: 7px;
-  background: var(--gotham-gold);
-  color: #1a1404;
+  background: #e24c4c;
+  color: #fff;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
   font-weight: 700;
@@ -912,11 +902,6 @@
   height: 10px;
   border-top: 1px solid var(--gotham-ice);
   border-left: 1px solid var(--gotham-ice);
-}
-
-.ops-icon-rail {
-  background: #050c08;
-  border-right: 1px solid rgba(143, 224, 122, 0.22);
 }
 
 .layout-mission.is-sat .wire-toast {

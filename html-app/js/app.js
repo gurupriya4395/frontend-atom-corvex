@@ -162,9 +162,9 @@ function renderChrome(d) {
 
   document.querySelectorAll('.nav-tabs button').forEach((btn) => {
     btn.onclick = () => {
-      document.querySelectorAll('.nav-tabs button').forEach((b) => b.classList.remove('active'))
-      btn.classList.add('active')
+      setNavTab(btn.dataset.nav)
       if (btn.dataset.nav === 'critical' && state.alertsOpen) closeAlerts()
+      else syncRailButtons()
     }
   })
   document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
@@ -290,6 +290,45 @@ function toggleAlerts() {
   else openAlerts()
 }
 
+function setNavTab(nav) {
+  document.querySelectorAll('.nav-tabs button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.nav === nav)
+  })
+}
+
+function goGlobe() {
+  state.alertsOpen = false
+  state.alertCaseId = null
+  state.mapMode = 'globe'
+  setNavTab('critical')
+  render()
+}
+
+function goSatelliteRail() {
+  state.alertsOpen = false
+  state.alertCaseId = null
+  state.mapMode = 'map'
+  render()
+  deskMap?.boot()
+  requestAnimationFrame(() => deskMap?.resize())
+}
+
+function syncRailButtons() {
+  const home = !state.alertsOpen && state.mapMode === 'globe'
+  const sat = !state.alertsOpen && state.mapMode === 'map'
+  const graphOn = Boolean(document.querySelector('.nav-tabs button[data-nav="analytics"].active'))
+  const pressed = (id, on) => {
+    const el = $(id)
+    if (!el) return
+    el.classList.toggle('active', on)
+    el.setAttribute('aria-pressed', String(on))
+  }
+  pressed('#rail-home', home && !graphOn)
+  pressed('#rail-alerts', state.alertsOpen)
+  pressed('#rail-map', sat)
+  pressed('#rail-graph', graphOn && !state.alertsOpen)
+}
+
 function openAlertCase(id) {
   state.alertCaseId = id
   state.alertMeta = markAlertRead(state.alertMeta, id)
@@ -329,10 +368,7 @@ function renderAlerts(d) {
   app.classList.toggle('alerts-open', state.alertsOpen)
   app.classList.toggle('alerts-case', Boolean(state.alertsOpen && state.alertCaseId))
 
-  $('#rail-filters').classList.toggle('active', !state.alertsOpen)
-  $('#rail-filters').setAttribute('aria-pressed', String(!state.alertsOpen))
-  $('#rail-alerts').classList.toggle('active', state.alertsOpen)
-  $('#rail-alerts').setAttribute('aria-pressed', String(state.alertsOpen))
+  syncRailButtons()
 
   const inbox = $('#alerts-inbox')
   inbox.hidden = !state.alertsOpen
@@ -608,20 +644,19 @@ export function initApp() {
   })
   if ($('#btn-demo')) $('#btn-demo').onclick = runDesk
   $('#btn-replay').onclick = runDesk
-  $('#rail-filters').onclick = () => {
+  $('#rail-home').onclick = goGlobe
+  $('#rail-objects').onclick = goGlobe
+  $('#rail-search').onclick = () => $('#search').focus()
+  $('#rail-graph').onclick = () => {
     if (state.alertsOpen) closeAlerts()
+    setNavTab('analytics')
+    syncRailButtons()
   }
+  $('#rail-layers').onclick = goGlobe
   $('#rail-alerts').onclick = toggleAlerts
-  $('#btn-globe').onclick = () => {
-    state.mapMode = 'globe'
-    render()
-  }
-  $('#btn-map').onclick = () => {
-    state.mapMode = 'map'
-    render()
-    deskMap.boot()
-    requestAnimationFrame(() => deskMap?.resize())
-  }
+  $('#rail-map').onclick = goSatelliteRail
+  $('#btn-globe').onclick = goGlobe
+  $('#btn-map').onclick = goSatelliteRail
   document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.timeMode = btn.dataset.mode
