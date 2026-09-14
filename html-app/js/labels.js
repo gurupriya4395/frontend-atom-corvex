@@ -33,3 +33,9 @@ export const WORKSPACE_LABELS = {
   response: 'Response workspace (panels unchanged)',
   insights: 'Insights / reports (panels unchanged)',
 }
+
+export const ALERT_CHANNEL_LABELS = {
+  act: 'Act',
+  watch: 'Watch',
+  closed: 'Closed',
+}

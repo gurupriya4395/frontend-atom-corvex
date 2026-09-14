@@ -12,6 +12,7 @@
     />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/layout-light.css" />
+    <link rel="stylesheet" href="css/alerts.css" />
     <link rel="stylesheet" href="css/nav.css" />
     <link rel="stylesheet" href="css/markers.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/dist/maplibre-gl.css" />
@@ -49,12 +50,11 @@
             <span id="view-badge" class="ops-mode-badge">Globe view</span>
           </div>
           <nav class="nav-tabs" aria-label="Main navigation">
-            <button type="button" class="active">Critical Events</button>
-            <button type="button">Monitoring</button>
-            <button type="button">Watchlist</button>
-            <button type="button">Alerts</button>
-            <button type="button">Data Analytics</button>
-            <button type="button">Risk Reports</button>
+            <button type="button" class="active" data-nav="critical">Critical Events</button>
+            <button type="button" data-nav="monitoring">Monitoring</button>
+            <button type="button" data-nav="watchlist">Watchlist</button>
+            <button type="button" data-nav="analytics">Data Analytics</button>
+            <button type="button" data-nav="reports">Risk Reports</button>
           </nav>
           <div class="nav-right">
             <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
@@ -90,6 +90,41 @@
       <div id="workspace-note" hidden></div>
 
       <div class="ops">
+        <nav class="ops-icon-rail" aria-label="Workspace tools">
+          <button type="button" id="rail-filters" class="ops-icon-btn active" title="Filters" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16M7 12h10M10 18h4" />
+            </svg>
+            <span>Filters</span>
+          </button>
+          <button type="button" id="rail-alerts" class="ops-icon-btn" title="Alerts" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9" />
+              <path d="M10 21h4" />
+            </svg>
+            <span>Alerts</span>
+            <em id="alert-badge" class="ops-icon-badge" hidden>0</em>
+          </button>
+        </nav>
+
+        <aside id="alerts-inbox" class="alerts-inbox" hidden>
+          <header class="alerts-inbox-head">
+            <div>
+              <span class="gotham-kicker">Inbox</span>
+              <h2>Alert objects</h2>
+            </div>
+            <span id="alert-inbox-meta" class="gotham-rid"></span>
+          </header>
+          <div class="alert-channels" role="tablist" aria-label="Alert queues">
+            <button type="button" data-channel="act" class="active">Act <em id="ch-act">0</em></button>
+            <button type="button" data-channel="watch">Watch <em id="ch-watch">0</em></button>
+            <button type="button" data-channel="closed">Closed <em id="ch-closed">0</em></button>
+          </div>
+          <div id="alert-inbox-list" class="alert-inbox-list"></div>
+        </aside>
+
+        <aside id="alert-drawer" class="alert-drawer" hidden></aside>
+
         <div id="map-wrap" class="map-wrap is-satellite">
           <div class="hud-frame" aria-hidden="true">
             <i class="c tl"></i>

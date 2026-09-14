@@ -2,10 +2,21 @@ import { ASSETS, DEMO, EVENTS, GLOBE_ASSETS, INDIA_ASSETS, INCOMING } from './da
 import { DESK_BEATS } from './sequence.js'
 import { enrich, clock, searchHay } from './scoring.js'
 import { fmtLat, fmtLng, fmtPair } from './coords.js'
-import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS } from './labels.js'
+import { VIEW_LABELS, TIME_WINDOW_LABELS, FOCUS_TYPE_LABELS } from './labels.js'
 import { eventMarkerHtml } from './markers.js'
 import { createGlobe } from './globe.js'
 import { DeskMap } from './map.js'
+import {
+  ALERT_STATUS,
+  buildQueues,
+  drawerHtml,
+  ensureAlertMeta,
+  inboxRowHtml,
+  markAlertRead,
+  markAlertUnread,
+  newActCount,
+  setAlertStatus,
+} from './alerts.js'
 
 const ALERT_FILTERS = {
   total: 'total',
@@ -45,6 +56,10 @@ const state = {
   toast: null,
   latencyMs: 86,
   incomingIdx: 0,
+  alertsOpen: false,
+  alertChannel: 'act',
+  alertCaseId: null,
+  alertMeta: {},
 }
 
 let globe = null
@@ -147,6 +162,7 @@ function renderChrome(d) {
     btn.onclick = () => {
       document.querySelectorAll('.nav-tabs button').forEach((b) => b.classList.remove('active'))
       btn.classList.add('active')
+      if (btn.dataset.nav === 'critical' && state.alertsOpen) closeAlerts()
     }
   })
   document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
@@ -236,6 +252,139 @@ function renderRail(d) {
   })
 }
 
+function alertEvents(d) {
+  const needle = state.q.trim().toLowerCase()
+  return d.pool.filter((e) => {
+    if (e.flag !== 'IN' || !e.linked) return false
+    if (needle && !searchHay(e).includes(needle)) return false
+    return true
+  })
+}
+
+function syncAlertMeta(d) {
+  state.alertMeta = ensureAlertMeta(alertEvents(d), state.alertMeta)
+}
+
+function openAlerts() {
+  state.alertsOpen = true
+  state.alertChannel = state.alertChannel || 'act'
+  render()
+}
+
+function closeAlerts() {
+  state.alertsOpen = false
+  state.alertCaseId = null
+  render()
+}
+
+function toggleAlerts() {
+  if (state.alertsOpen) closeAlerts()
+  else openAlerts()
+}
+
+function openAlertCase(id) {
+  state.alertCaseId = id
+  state.alertMeta = markAlertRead(state.alertMeta, id)
+  forceGlobeFly = true
+  pickEvent(id)
+}
+
+function applyAlertAction(action) {
+  if (!state.alertCaseId) return
+  const allowed = new Set(Object.values(ALERT_STATUS))
+  if (!allowed.has(action)) return
+  const id = state.alertCaseId
+  state.alertMeta = setAlertStatus(state.alertMeta, id, action)
+  const event = enrich(state.raw, ASSETS).find((e) => e.id === id)
+  if (action === ALERT_STATUS.resolved || action === ALERT_STATUS.dismissed || action === ALERT_STATUS.snoozed) {
+    state.alertChannel = 'closed'
+  } else if (event?.alert) {
+    state.alertChannel = 'act'
+  }
+  render()
+}
+
+function renderAlerts(d) {
+  syncAlertMeta(d)
+  const queues = buildQueues(alertEvents(d), state.alertMeta)
+  const badgeN = newActCount(queues)
+  const badge = $('#alert-badge')
+  if (badgeN > 0) {
+    badge.hidden = false
+    badge.textContent = String(badgeN)
+  } else {
+    badge.hidden = true
+  }
+
+  const app = document.querySelector('.layout-mission')
+  app.classList.toggle('alerts-open', state.alertsOpen)
+  app.classList.toggle('alerts-case', Boolean(state.alertsOpen && state.alertCaseId))
+
+  $('#rail-filters').classList.toggle('active', !state.alertsOpen)
+  $('#rail-filters').setAttribute('aria-pressed', String(!state.alertsOpen))
+  $('#rail-alerts').classList.toggle('active', state.alertsOpen)
+  $('#rail-alerts').setAttribute('aria-pressed', String(state.alertsOpen))
+
+  const inbox = $('#alerts-inbox')
+  inbox.hidden = !state.alertsOpen
+  const drawer = $('#alert-drawer')
+  drawer.hidden = !(state.alertsOpen && state.alertCaseId)
+
+  if (!state.alertsOpen) return
+
+  $('#ch-act').textContent = queues.act.length
+  $('#ch-watch').textContent = queues.watch.length
+  $('#ch-closed').textContent = queues.closed.length
+  $('#alert-inbox-meta').textContent = `${badgeN} new`
+  document.querySelectorAll('.alert-channels button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.channel === state.alertChannel)
+    btn.onclick = () => {
+      state.alertChannel = btn.dataset.channel
+      render()
+    }
+  })
+
+  const rows = queues[state.alertChannel] || []
+  const list = $('#alert-inbox-list')
+  if (!rows.length) {
+    const empty =
+      state.alertChannel === 'act'
+        ? 'No alert objects require action.'
+        : state.alertChannel === 'watch'
+          ? 'No linked watch objects.'
+          : 'No closed cases.'
+    list.innerHTML = `<div class="alert-inbox-empty">${empty}</div>`
+  } else {
+    list.innerHTML = rows.map((row) => inboxRowHtml(row, state.alertCaseId)).join('')
+    list.querySelectorAll('.alert-row').forEach((btn) => {
+      btn.onclick = () => openAlertCase(btn.dataset.id)
+    })
+  }
+
+  if (state.alertCaseId) {
+    const event = d.pool.find((e) => e.id === state.alertCaseId)
+    if (!event?.linked) {
+      state.alertCaseId = null
+      drawer.hidden = true
+      app.classList.remove('alerts-case')
+      return
+    }
+    const meta = state.alertMeta[event.id]
+    drawer.innerHTML = drawerHtml(event, meta)
+    drawer.querySelector('[data-alert-close]')?.addEventListener('click', () => {
+      state.alertCaseId = null
+      render()
+    })
+    drawer.querySelectorAll('[data-alert-action]').forEach((btn) => {
+      btn.addEventListener('click', () => applyAlertAction(btn.dataset.alertAction))
+    })
+    drawer.querySelector('[data-alert-asset]')?.addEventListener('click', () => {
+      forceGlobeFly = true
+      pickAsset(drawer.querySelector('[data-alert-asset]').dataset.alertAsset)
+    })
+  }
+}
+
 function renderFeed(d) {
   const n = state.timeMode === 'forecast'
     ? d.pool.filter((e) => e.flag === 'IN' && isForecastEvent(e) && inNextTwoDays(e) && state.cats[e.category] && state.sevs[e.severity]).length
@@ -275,9 +424,12 @@ function renderMaps(d) {
 
   const pulseEventId = state.scene.pulse ? DEMO.eventId : null
   const highlightAssetId = state.scene.warehouse ? DEMO.assetId : null
+  const globeEvents = state.alertsOpen
+    ? d.pool.filter((e) => e.flag === 'IN' && e.linked)
+    : d.filtered
 
   globe?.setPaused(state.mapMode !== 'globe')
-  globe?.setData({ events: d.filtered, assets: GLOBE_ASSETS, showRadiusFor: d.showRadiusFor, pulseEventId, highlightAssetId })
+  globe?.setData({ events: globeEvents, assets: GLOBE_ASSETS, showRadiusFor: d.showRadiusFor, pulseEventId, highlightAssetId })
   if (state.mapMode === 'globe') {
     globe?.resize()
     const flyKey = d.selected ? `${d.selected.type}:${d.selected.id}` : pulseEventId ? `pulse:${pulseEventId}` : ''
@@ -290,7 +442,7 @@ function renderMaps(d) {
       } else if (d.selected) {
         const target =
           d.selected.type === 'event'
-            ? d.filtered.find((e) => e.id === d.selected.id)
+            ? d.pool.find((e) => e.id === d.selected.id)
             : GLOBE_ASSETS.find((a) => a.id === d.selected.id)
         if (target?.coords) globe.flyTo(target.coords[1], target.coords[0], true)
       }
@@ -323,7 +475,8 @@ function renderMaps(d) {
   const toast = $('#wire-toast')
   if (state.toast) {
     toast.hidden = false
-    toast.innerHTML = `<span>New</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
+    toast.classList.toggle('alert-toast', Boolean(state.toast.alert))
+    toast.innerHTML = `<span>${state.toast.alert ? 'Object' : 'New'}</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
   } else toast.hidden = true
 
   document.querySelectorAll('.time-dock button').forEach((btn) => {
@@ -346,6 +499,7 @@ function render() {
   renderChrome(d2)
   renderRail(d2)
   renderFeed(d2)
+  renderAlerts(d2)
   renderMaps(d2)
 }
 
@@ -392,7 +546,11 @@ export function initApp() {
       return
     }
     forceGlobeFly = true
-    if (sel.type === 'event') pickEvent(sel.id)
+    if (sel.type === 'event') {
+      const event = enrich(state.raw, ASSETS).find((e) => e.id === sel.id)
+      if (state.alertsOpen && event?.linked) openAlertCase(sel.id)
+      else pickEvent(sel.id)
+    }
     if (sel.type === 'asset') pickAsset(sel.id)
   })
   new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
@@ -422,6 +580,10 @@ export function initApp() {
   })
   if ($('#btn-demo')) $('#btn-demo').onclick = runDesk
   $('#btn-replay').onclick = runDesk
+  $('#rail-filters').onclick = () => {
+    if (state.alertsOpen) closeAlerts()
+  }
+  $('#rail-alerts').onclick = toggleAlerts
   $('#btn-globe').onclick = () => {
     state.mapMode = 'globe'
     render()
@@ -478,7 +640,11 @@ export function initApp() {
         e.id === item.threadId ? { ...e, publishedAt: at, updates: [...(e.updates || []), { at, text: item.text }] } : e,
       )
       state.freshId = item.threadId
-      state.toast = { title: 'Watch update', place: item.text }
+      state.alertMeta = markAlertUnread(state.alertMeta, item.threadId)
+      const host = enrich(state.raw, ASSETS).find((e) => e.id === item.threadId)
+      state.toast = host?.alert
+        ? { title: 'Object updated', place: item.text, alert: true }
+        : { title: 'Watch update', place: item.text }
       state.log = [`Update · ${item.threadId}`, ...state.log].slice(0, 6)
     } else {
       const next = { ...item, publishedAt: at, eventAt: at }
@@ -502,6 +668,15 @@ export function initApp() {
       $('#search').focus()
     }
     if (e.key === 'Escape') {
+      if (state.alertsOpen && state.alertCaseId) {
+        state.alertCaseId = null
+        render()
+        return
+      }
+      if (state.alertsOpen) {
+        closeAlerts()
+        return
+      }
       cueTimers.forEach(clearTimeout)
       state.scene = { pulse: false, flood: false, warehouse: false, distance: false }
       state.selectedId = null
