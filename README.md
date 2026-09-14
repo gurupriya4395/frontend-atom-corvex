@@ -24,4 +24,4 @@ In VS Code: **File → Open Folder…** and select **`html-app`**.
 | Satellite map | `html-app/js/map.js` |
 | Events / assets | `html-app/js/data.js` |
 
-Three.js and MapLibre load from CDN. Clicking a Proximity card stays on the globe and flies the camera to that event.
+`npm install` pulls **three** and **maplibre-gl** (the globe and satellite map). Then `npm run dev`. Clicking a Proximity card stays on the globe and flies the camera to that event.
