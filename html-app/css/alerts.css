@@ -839,3 +839,53 @@
   border: 1px solid var(--gotham-ice);
   color: var(--gotham-text);
 }
+
+.layout-mission.alerts-case .ev-brief-wrap {
+  display: none;
+}
+
+.layout-mission.is-sat .ev-brief {
+  background: rgba(7, 17, 12, 0.94);
+  border: 1px solid rgba(143, 224, 122, 0.35);
+  border-radius: 2px;
+  color: #dcefd4;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+}
+
+.layout-mission.is-sat .ev-brief h4 {
+  color: #e6f5dc;
+}
+
+.layout-mission.is-sat .ev-brief p,
+.layout-mission.is-sat .ev-brief-date,
+.layout-mission.is-sat .ev-brief-asset {
+  color: #9bb894;
+}
+
+.layout-mission.is-sat .ev-source {
+  color: var(--gotham-ice);
+}
+
+.layout-mission.is-sat .ev-dist {
+  background: #122018;
+  color: var(--gotham-ice);
+}
+
+.layout-mission.is-sat .ev-brief.sev-high .ev-sev {
+  background: #3a1610;
+  color: #ff8a70;
+}
+
+.layout-mission.is-sat .desk-hud .link-halo {
+  stroke: rgba(7, 17, 12, 0.85);
+}
+
+.layout-mission.is-sat .desk-hud .link-dash {
+  stroke: #8fe07a;
+}
+
+.layout-mission.is-sat .dist-chip {
+  background: #07110c;
+  border: 1px solid rgba(143, 224, 122, 0.45);
+  color: #8fe07a;
+}
