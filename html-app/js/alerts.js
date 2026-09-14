@@ -12,13 +12,15 @@ export const ALERT_STATUS = {
 export const CLOSED_STATUSES = new Set(['resolved', 'dismissed', 'snoozed'])
 
 export const STATUS_LABELS = {
-  new: 'New',
-  ack: 'Ack',
-  investigating: 'Tasked',
+  new: 'Unacked',
+  ack: 'Watching',
+  investigating: 'Incident',
   resolved: 'Closed',
   dismissed: 'Dropped',
-  snoozed: 'Hold',
+  snoozed: 'Parked',
 }
+
+const LEVEL_LABELS = { none: 'None', low: 'Low', medium: 'Medium', high: 'High' }
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -30,41 +32,44 @@ export function defaultMeta() {
 export function ensureAlertMeta(events, meta) {
   const next = { ...meta }
   for (const event of events) {
-    if (!event.linked) continue
+    if (!event.alert) continue
     if (!next[event.id]) next[event.id] = defaultMeta()
   }
   return next
 }
 
 function sortQueue(items) {
+  const rank = { high: 0, medium: 1, low: 2, none: 3 }
   return items.sort((a, b) => {
+    const pa = rank[a.event.alertPriority] ?? 3
+    const pb = rank[b.event.alertPriority] ?? 3
+    if (pa !== pb) return pa - pb
     if (a.meta.unread !== b.meta.unread) return a.meta.unread ? -1 : 1
-    if ((a.meta.status === 'new') !== (b.meta.status === 'new')) return a.meta.status === 'new' ? -1 : 1
     return (b.event.publishedAt || 0) - (a.event.publishedAt || 0)
   })
 }
 
 export function buildQueues(events, alertMeta) {
-  const act = []
-  const watch = []
+  const alerts = []
+  const incidents = []
   const closed = []
   for (const event of events) {
-    if (!event.linked || event.flag !== 'IN') continue
+    if (!event.alert && !alertMeta[event.id]) continue
     const meta = alertMeta[event.id] || defaultMeta()
     const row = { event, meta }
     if (CLOSED_STATUSES.has(meta.status)) closed.push(row)
-    else if (event.alert) act.push(row)
-    else watch.push(row)
+    else if (meta.status === ALERT_STATUS.investigating) incidents.push(row)
+    else if (event.alert) alerts.push(row)
   }
   return {
-    act: sortQueue(act),
-    watch: sortQueue(watch),
+    alerts: sortQueue(alerts),
+    incidents: sortQueue(incidents),
     closed: sortQueue(closed),
   }
 }
 
 export function newActCount(queues) {
-  return queues.act.filter((row) => row.meta.status === ALERT_STATUS.new).length
+  return queues.alerts.filter((row) => row.meta.status === ALERT_STATUS.new && row.event.alertPriority === 'high').length
 }
 
 export function isAccelerating(event) {
@@ -76,7 +81,7 @@ export function isAccelerating(event) {
 
 export function storyBadge(event, meta) {
   if (meta.unread && meta.status === ALERT_STATUS.new) return 'NEW'
-  if (isAccelerating(event)) return 'ACCELERATING'
+  if (isAccelerating(event)) return 'UPDATING'
   return null
 }
 
@@ -110,29 +115,47 @@ export function markAlertUnread(meta, id) {
 }
 
 function urgencyClass(event) {
-  if (event.alert && event.impact === 'high') return 'crit'
-  if (event.alert) return 'high'
-  if (event.impact === 'medium') return 'med'
-  return 'low'
+  if (event.alertPriority === 'high') return 'crit'
+  if (event.alertPriority === 'medium') return 'high'
+  return 'med'
+}
+
+function pipeChip(kind, level, label) {
+  const lv = level || 'none'
+  return `<span class="pipe-chip ${kind}-${lv}">${esc(label)}</span>`
+}
+
+export function pipelineHtml(event) {
+  const risk = event.risk || 'low'
+  const exposure = event.exposure || 'none'
+  const priority = event.alert ? event.alertPriority : 'none'
+  return `<div class="pipe-row">
+    ${pipeChip('event', 'yes', 'Event')}
+    ${pipeChip('risk', risk, `Risk ${LEVEL_LABELS[risk] || risk}`)}
+    ${pipeChip('exp', exposure, `Exposure ${LEVEL_LABELS[exposure] || exposure}`)}
+    ${pipeChip('al', priority, priority === 'none' ? 'Not an alert' : `Alert ${LEVEL_LABELS[priority]}`)}
+  </div>`
 }
 
 export function inboxRowHtml(row, selectedId) {
   const { event, meta } = row
   const badge = storyBadge(event, meta)
   const asset = event.primary?.asset
-  const hit = asset ? `${event.primary.km.toFixed(1)} km · ${asset.name}` : 'Linked asset'
+  const hit = asset ? `${event.primary.km.toFixed(1)} km · ${asset.name}` : 'No ATOM asset in radius'
   const n = event.updates?.length || 0
   const selected = selectedId === event.id ? 'selected' : ''
   const unread = meta.unread ? 'unread' : ''
+  const kind = meta.status === ALERT_STATUS.investigating ? 'Incident' : 'Alert'
   return `<button type="button" class="alert-row ${selected} ${unread} urg-${urgencyClass(event)}" data-id="${esc(event.id)}">
     <i class="alert-row-bar" aria-hidden="true"></i>
     <span class="alert-row-main">
       <span class="alert-row-kicker">
-        <span class="alert-type">${event.alert ? 'Tgt' : 'Hold'}</span>
+        <span class="alert-type">${kind}</span>
         <span class="alert-rid">${esc(ridFor(event))}</span>
         <span class="alert-ago">${esc(relativeTime(event.publishedAt))}</span>
       </span>
       <strong>${esc(event.title)}</strong>
+      ${pipelineHtml(event)}
       <span class="alert-row-meta">
         <span>${esc(hit)}</span>
         ${badge ? `<em class="alert-stamp ${badge === 'NEW' ? 'new' : 'accel'}">${badge}</em>` : ''}
@@ -149,39 +172,49 @@ export function drawerHtml(event, meta) {
   const status = meta.status
   const updates = [...(event.updates || [])].sort((a, b) => b.at - a.at)
   const canAck = status === ALERT_STATUS.new
-  const canInvestigate = status === ALERT_STATUS.new || status === ALERT_STATUS.ack
+  const canIncident = status === ALERT_STATUS.new || status === ALERT_STATUS.ack
   const openCase = !CLOSED_STATUSES.has(status)
-
+  const isIncident = status === ALERT_STATUS.investigating
   const prop = (k, v) => `<div class="gotham-prop"><span>${k}</span><b>${v}</b></div>`
+  const risk = event.risk || 'low'
+  const exposure = event.exposure || 'none'
+  const priority = event.alertPriority || 'none'
 
   return `<header class="alert-drawer-head">
     <div>
-      <span class="gotham-kicker">${event.alert ? 'Target' : 'Hold object'}</span>
+      <span class="gotham-kicker">${isIncident ? 'Incident' : 'Alert'}</span>
       <h2>${esc(event.title)}</h2>
       <code class="gotham-rid">${esc(ridFor(event))}</code>
     </div>
-    <button type="button" class="alert-drawer-close" data-alert-close title="Close object">×</button>
+    <button type="button" class="alert-drawer-close" data-alert-close title="Close">×</button>
   </header>
   <div class="alert-drawer-scroll">
   <div class="alert-drawer-stamps">
     <span class="alert-status st-${status}">${STATUS_LABELS[status]}</span>
-    <span class="alert-sev ${event.severity}">${esc(event.severity)}</span>
-    ${event.alert && status === ALERT_STATUS.new ? '<span class="alert-stamp new">NEEDS ACTION</span>' : ''}
+    <span class="alert-sev ${priority}">${esc(priority === 'none' ? 'not an alert' : `${priority} priority`)}</span>
   </div>
   <p class="alert-brief">${esc(brief.line)}</p>
   <section class="gotham-section">
-    <h3>Metadata</h3>
+    <h3>Why this is ${isIncident ? 'an incident' : event.alert ? 'an alert' : 'an event'}</h3>
+    <div class="gotham-props pipeline-props">
+      ${prop('Event', 'Yes · something is happening')}
+      ${prop('Risk', `${LEVEL_LABELS[risk]} · how serious it could become`)}
+      ${prop('Exposure', exposure === 'none' ? 'None · no ATOM asset in radius' : `${LEVEL_LABELS[exposure]} · ${asset ? `${event.primary.km.toFixed(1)} km · ${asset.name}` : 'linked site'}`)}
+      ${prop('Alert', event.alert ? `${LEVEL_LABELS[priority]} · somebody needs to pay attention` : 'No · does not page the desk')}
+      ${prop('Incident', isIncident ? 'Yes · the organization is responding' : 'No · response not opened')}
+    </div>
+  </section>
+  <section class="gotham-section">
+    <h3>Record</h3>
     <div class="gotham-props">
       ${prop('Location', esc(event.place))}
       ${prop('Published', esc(clock(event.publishedAt)))}
-      ${prop('Impact', esc(event.impact || '—'))}
-      ${prop('Score', event.raw != null ? `${event.raw.toFixed(2)} / 3` : '—')}
       ${prop('Source', esc(event.source || '—'))}
       ${prop('Domain', esc(event.domain || '—'))}
     </div>
   </section>
   <section class="gotham-section">
-    <h3>Correlated</h3>
+    <h3>Exposed asset</h3>
     ${
       asset
         ? `<button type="button" class="gotham-object" data-alert-asset="${esc(asset.id)}">
@@ -189,13 +222,8 @@ export function drawerHtml(event, meta) {
             <strong>${esc(asset.name)}</strong>
             <em>${event.primary.km.toFixed(1)} km · ${esc(asset.criticality)} criticality</em>
           </button>`
-        : '<p class="gotham-empty">No linked asset object.</p>'
+        : '<p class="gotham-empty">No registered site sits inside this radius. High risk without exposure is not an alert.</p>'
     }
-    <div class="gotham-object is-static">
-      <span class="gotham-kicker">Event</span>
-      <strong>${esc(event.id)}</strong>
-      <em>${esc(event.kind)} · ${esc(event.category)}</em>
-    </div>
   </section>
   <section class="gotham-section">
     <h3>Track</h3>
@@ -210,9 +238,11 @@ export function drawerHtml(event, meta) {
   </div>
   <footer class="alert-actions">
     <button type="button" data-alert-action="ack" ${canAck ? '' : 'disabled'}>Ack</button>
-    <button type="button" data-alert-action="investigating" ${canInvestigate ? '' : 'disabled'}>Task</button>
-    <button type="button" data-alert-action="snoozed" ${openCase ? '' : 'disabled'}>Hold</button>
+    <button type="button" data-alert-action="investigating" ${canIncident ? '' : 'disabled'}>Open incident</button>
+    <button type="button" data-alert-action="snoozed" ${openCase ? '' : 'disabled'}>Park</button>
     <button type="button" class="danger" data-alert-action="dismissed" ${openCase ? '' : 'disabled'}>Drop</button>
     <button type="button" class="primary" data-alert-action="resolved" ${openCase ? '' : 'disabled'}>Close</button>
   </footer>`
 }
+
+export { LEVEL_LABELS }

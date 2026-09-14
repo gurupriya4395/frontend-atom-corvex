@@ -110,14 +110,15 @@
         <aside id="alerts-inbox" class="alerts-inbox" hidden>
           <header class="alerts-inbox-head">
             <div>
-              <span class="gotham-kicker">Tasking</span>
-              <h2>Priority targets</h2>
+              <span class="gotham-kicker">Alerts</span>
+              <h2>Needs attention</h2>
             </div>
             <span id="alert-inbox-meta" class="gotham-rid"></span>
           </header>
+          <p class="alert-rule">Event is not an alert. Alert = risk × exposure. Incident = we decided to respond.</p>
           <div class="alert-channels" role="tablist" aria-label="Alert queues">
-            <button type="button" data-channel="act" class="active">Act <em id="ch-act">0</em></button>
-            <button type="button" data-channel="watch">Hold <em id="ch-watch">0</em></button>
+            <button type="button" data-channel="alerts" class="active">Alerts <em id="ch-alerts">0</em></button>
+            <button type="button" data-channel="incidents">Incidents <em id="ch-incidents">0</em></button>
             <button type="button" data-channel="closed">Closed <em id="ch-closed">0</em></button>
           </div>
           <div id="alert-inbox-list" class="alert-inbox-list"></div>
@@ -247,7 +248,7 @@
         <aside class="feed ops-feed">
           <div class="feed-head">
             <div class="feed-title">
-              <h2>Proximity</h2>
+              <h2>Events</h2>
               <em id="feed-count">0</em>
             </div>
             <div class="feed-meta">

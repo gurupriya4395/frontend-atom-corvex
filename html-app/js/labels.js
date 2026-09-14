@@ -35,7 +35,7 @@ export const WORKSPACE_LABELS = {
 }
 
 export const ALERT_CHANNEL_LABELS = {
-  act: 'Act',
-  watch: 'Hold',
+  alerts: 'Alerts',
+  incidents: 'Incidents',
   closed: 'Closed',
 }

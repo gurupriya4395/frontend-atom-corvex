@@ -15,6 +15,7 @@ import {
   markAlertRead,
   markAlertUnread,
   newActCount,
+  pipelineHtml,
   setAlertStatus,
 } from './alerts.js'
 
@@ -57,7 +58,7 @@ const state = {
   latencyMs: 86,
   incomingIdx: 0,
   alertsOpen: false,
-  alertChannel: 'act',
+  alertChannel: 'alerts',
   alertCaseId: null,
   alertMeta: {},
   prevMapMode: 'globe',
@@ -211,13 +212,13 @@ function renderChrome(d) {
     const pct = Math.min(100, (raw / 3) * 100)
     const asset = d.selectedEvent.primary?.asset
     risk.className = 'risk-row'
-    risk.innerHTML = `<span class="risk-row-tag">Risk score</span><div class="risk-score-main"><strong>${raw.toFixed(2)}</strong><span>of 3</span></div><div class="risk-bar"><i style="width:${pct}%"></i></div><div class="risk-factors"><span class="risk-chip impact-${d.selectedEvent.impact || 'low'}">${{ high: 'High impact', medium: 'Medium impact', low: 'Low impact' }[d.selectedEvent.impact] || 'Low impact'}</span>${asset ? `<span class="risk-chip">${d.selectedEvent.primary.km.toFixed(1)} km · ${asset.name}</span>` : ''}${d.selectedEvent.alert ? '<span class="risk-chip alert">Needs attention</span>' : ''}</div>`
+    risk.innerHTML = `<span class="risk-row-tag">Risk score</span><div class="risk-score-main"><strong>${raw.toFixed(2)}</strong><span>of 3</span></div><div class="risk-bar"><i style="width:${pct}%"></i></div><div class="risk-factors"><span class="risk-chip impact-${d.selectedEvent.impact || 'low'}">Risk ${d.selectedEvent.risk || d.selectedEvent.impact || 'low'}</span><span class="risk-chip">Exposure ${d.selectedEvent.exposure || 'none'}</span>${asset ? `<span class="risk-chip">${d.selectedEvent.primary.km.toFixed(1)} km · ${asset.name}</span>` : ''}${d.selectedEvent.alert ? '<span class="risk-chip alert">Alert</span>' : '<span class="risk-chip">Event only</span>'}</div>`
   } else {
     const linked = d.indiaPool.filter((e) => e.linked)
     const maxRaw = linked.reduce((m, e) => Math.max(m, e.raw || 0), 0)
     const hot = linked.filter((e) => e.alert).length
     risk.className = 'risk-row desk'
-    risk.innerHTML = `<span class="risk-row-tag">Overview</span><div class="risk-score-main"><strong>${maxRaw.toFixed(2)}</strong><span>peak score</span></div><div class="risk-factors"><span class="risk-chip">${linked.length} near assets</span><span class="risk-chip alert">${hot} flagged</span><span class="risk-chip">${d.indiaPool.length} active</span></div>`
+    risk.innerHTML = `<span class="risk-row-tag">Overview</span><div class="risk-score-main"><strong>${maxRaw.toFixed(2)}</strong><span>peak score</span></div><div class="risk-factors"><span class="risk-chip">${linked.length} exposed</span><span class="risk-chip alert">${hot} alerts</span><span class="risk-chip">${d.indiaPool.length} events</span></div>`
   }
 }
 
@@ -256,7 +257,8 @@ function renderRail(d) {
 function alertEvents(d) {
   const needle = state.q.trim().toLowerCase()
   return d.pool.filter((e) => {
-    if (e.flag !== 'IN' || !e.linked) return false
+    if (e.flag !== 'IN') return false
+    if (!e.alert && !state.alertMeta[e.id]) return false
     if (needle && !searchHay(e).includes(needle)) return false
     return true
   })
@@ -269,7 +271,7 @@ function syncAlertMeta(d) {
 function openAlerts() {
   if (!state.alertsOpen) state.prevMapMode = state.mapMode
   state.alertsOpen = true
-  state.alertChannel = state.alertChannel || 'act'
+  state.alertChannel = state.alertChannel || 'alerts'
   state.mapMode = 'map'
   render()
   deskMap?.boot()
@@ -301,11 +303,12 @@ function applyAlertAction(action) {
   if (!allowed.has(action)) return
   const id = state.alertCaseId
   state.alertMeta = setAlertStatus(state.alertMeta, id, action)
-  const event = enrich(state.raw, ASSETS).find((e) => e.id === id)
   if (action === ALERT_STATUS.resolved || action === ALERT_STATUS.dismissed || action === ALERT_STATUS.snoozed) {
     state.alertChannel = 'closed'
-  } else if (event?.alert) {
-    state.alertChannel = 'act'
+  } else if (action === ALERT_STATUS.investigating) {
+    state.alertChannel = 'incidents'
+  } else {
+    state.alertChannel = 'alerts'
   }
   render()
 }
@@ -338,10 +341,10 @@ function renderAlerts(d) {
 
   if (!state.alertsOpen) return
 
-  $('#ch-act').textContent = queues.act.length
-  $('#ch-watch').textContent = queues.watch.length
+  $('#ch-alerts').textContent = queues.alerts.length
+  $('#ch-incidents').textContent = queues.incidents.length
   $('#ch-closed').textContent = queues.closed.length
-  $('#alert-inbox-meta').textContent = `${badgeN} active`
+  $('#alert-inbox-meta').textContent = `${badgeN} high`
   document.querySelectorAll('.alert-channels button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.channel === state.alertChannel)
     btn.onclick = () => {
@@ -354,11 +357,11 @@ function renderAlerts(d) {
   const list = $('#alert-inbox-list')
   if (!rows.length) {
     const empty =
-      state.alertChannel === 'act'
-        ? 'No active targets in the tasking queue.'
-        : state.alertChannel === 'watch'
-          ? 'No hold tracks near registered assets.'
-          : 'No closed tasking.'
+      state.alertChannel === 'alerts'
+        ? 'No events meet the alert bar (risk × exposure). Everything else stays on Events.'
+        : state.alertChannel === 'incidents'
+          ? 'No open incidents. Open an incident when the organization decides to respond.'
+          : 'No closed alerts or incidents.'
     list.innerHTML = `<div class="alert-inbox-empty">${empty}</div>`
   } else {
     list.innerHTML = rows.map((row) => inboxRowHtml(row, state.alertCaseId)).join('')
@@ -369,7 +372,7 @@ function renderAlerts(d) {
 
   if (state.alertCaseId) {
     const event = d.pool.find((e) => e.id === state.alertCaseId)
-    if (!event?.linked) {
+    if (!event || (!event.alert && !state.alertMeta[event.id])) {
       state.alertCaseId = null
       drawer.hidden = true
       app.classList.remove('alerts-case')
@@ -408,7 +411,7 @@ function renderFeed(d) {
       const forecast = isForecastEvent(ev)
       const when = clock(ev.eventAt || ev.publishedAt)
       const assetName = ev.primary?.asset?.name
-      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${forecast ? 'forecast' : 'ok'}">${forecast ? 'forecast' : 'live'}</span><span class="chip ${ev.severity}">${ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3><p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">Asset affected · ${assetName}</p>` : ''}<p class="card-date">${when}</p></span></button>`
+      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${forecast ? 'forecast' : 'ok'}">${forecast ? 'forecast' : 'live'}</span><span class="chip ${ev.severity}">risk ${ev.risk || ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3>${pipelineHtml(ev)}<p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">${ev.alert ? 'Alert' : 'Event'} · ${assetName}</p>` : '<p class="asset-hit">Event only · no ATOM exposure</p>'}<p class="card-date">${when}</p></span></button>`
     })
     .join('')
   $('#event-cards').querySelectorAll('.card').forEach((btn) => {
@@ -444,11 +447,11 @@ function renderMaps(d) {
   const pulseEventId = state.scene.pulse ? DEMO.eventId : null
   const highlightAssetId = state.scene.warehouse ? DEMO.assetId : null
   const globeEvents = state.alertsOpen
-    ? d.pool.filter((e) => e.flag === 'IN' && e.linked)
+    ? d.pool.filter((e) => e.flag === 'IN' && (e.alert || state.alertMeta[e.id]))
     : d.filtered
 
   const mapEvents = state.alertsOpen
-    ? d.pool.filter((e) => e.flag === 'IN' && e.linked)
+    ? d.pool.filter((e) => e.flag === 'IN' && (e.alert || state.alertMeta[e.id]))
     : d.filtered
 
   globe?.setPaused(state.mapMode !== 'globe')
@@ -501,7 +504,7 @@ function renderMaps(d) {
   if (state.toast) {
     toast.hidden = false
     toast.classList.toggle('alert-toast', Boolean(state.toast.alert))
-    toast.innerHTML = `<span>${state.toast.alert ? 'TGT' : 'New'}</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
+    toast.innerHTML = `<span>${state.toast.alert ? 'Alert' : 'Event'}</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
   } else toast.hidden = true
 
   document.querySelectorAll('.time-dock button').forEach((btn) => {
@@ -573,7 +576,7 @@ export function initApp() {
     forceGlobeFly = true
     if (sel.type === 'event') {
       const event = enrich(state.raw, ASSETS).find((e) => e.id === sel.id)
-      if (state.alertsOpen && event?.linked) openAlertCase(sel.id)
+      if (state.alertsOpen && event?.alert) openAlertCase(sel.id)
       else pickEvent(sel.id)
     }
     if (sel.type === 'asset') pickAsset(sel.id)
@@ -672,8 +675,8 @@ export function initApp() {
       state.alertMeta = markAlertUnread(state.alertMeta, item.threadId)
       const host = enrich(state.raw, ASSETS).find((e) => e.id === item.threadId)
       state.toast = host?.alert
-        ? { title: 'Target update', place: item.text, alert: true }
-        : { title: 'Watch update', place: item.text }
+        ? { title: 'Alert update', place: item.text, alert: true }
+        : { title: 'Event update', place: item.text }
       state.log = [`Update · ${item.threadId}`, ...state.log].slice(0, 6)
     } else {
       const next = { ...item, publishedAt: at, eventAt: at }
