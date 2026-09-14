@@ -15,7 +15,7 @@
 .layout-mission .mission-header {
   position: absolute;
   top: 0;
-  left: 0;
+  left: var(--icon-rail-w, 44px);
   right: 0;
   z-index: 30;
   background: #fff;
