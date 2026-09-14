@@ -1,6 +1,6 @@
 export const VIEW_LABELS = {
   globe: 'Globe view',
-  map: 'Map view',
+  map: 'Satellite view',
 }
 
 export const CATEGORY_LABELS = {
@@ -36,6 +36,6 @@ export const WORKSPACE_LABELS = {
 
 export const ALERT_CHANNEL_LABELS = {
   act: 'Act',
-  watch: 'Watch',
+  watch: 'Hold',
   closed: 'Closed',
 }

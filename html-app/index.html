@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Share+Tech+Mono&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/app.css" />
@@ -70,7 +70,7 @@
             <button type="button" data-mode="history">HISTORICAL</button>
           </div>
           <div class="toolbar-group view-cluster" role="group" aria-label="View mode">
-            <button type="button" data-present="map" class="active">MAP</button>
+            <button type="button" data-present="map" class="active">SAT</button>
             <button type="button" data-present="list">LIST</button>
             <button type="button" data-present="snapshots">SNAPSHOTS</button>
           </div>
@@ -110,14 +110,14 @@
         <aside id="alerts-inbox" class="alerts-inbox" hidden>
           <header class="alerts-inbox-head">
             <div>
-              <span class="gotham-kicker">Inbox</span>
-              <h2>Alert objects</h2>
+              <span class="gotham-kicker">Tasking</span>
+              <h2>Priority targets</h2>
             </div>
             <span id="alert-inbox-meta" class="gotham-rid"></span>
           </header>
           <div class="alert-channels" role="tablist" aria-label="Alert queues">
             <button type="button" data-channel="act" class="active">Act <em id="ch-act">0</em></button>
-            <button type="button" data-channel="watch">Watch <em id="ch-watch">0</em></button>
+            <button type="button" data-channel="watch">Hold <em id="ch-watch">0</em></button>
             <button type="button" data-channel="closed">Closed <em id="ch-closed">0</em></button>
           </div>
           <div id="alert-inbox-list" class="alert-inbox-list"></div>
@@ -131,6 +131,12 @@
             <i class="c tr"></i>
             <i class="c bl"></i>
             <i class="c br"></i>
+          </div>
+          <div id="sat-hud" class="sat-hud" hidden>
+            <div class="sat-scan" aria-hidden="true"></div>
+            <div class="sat-crosshair" aria-hidden="true"><b></b><i></i><i></i></div>
+            <div class="sat-class">UNCLASSIFIED · EO SATELLITE</div>
+            <div id="sat-readout" class="sat-readout">SATCOM · WORLD IMAGERY</div>
           </div>
 
           <div id="globe-stage" class="globe-stage on"></div>
@@ -155,7 +161,7 @@
 
           <div class="view-toggle">
             <button id="btn-globe" type="button" class="active">Globe</button>
-            <button id="btn-map" type="button">Map</button>
+            <button id="btn-map" type="button">Satellite</button>
           </div>
 
           <div id="globe-tools" class="globe-tools">

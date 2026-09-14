@@ -13,11 +13,11 @@ export const CLOSED_STATUSES = new Set(['resolved', 'dismissed', 'snoozed'])
 
 export const STATUS_LABELS = {
   new: 'New',
-  ack: 'Acknowledged',
-  investigating: 'Investigating',
-  resolved: 'Resolved',
-  dismissed: 'Dismissed',
-  snoozed: 'Snoozed',
+  ack: 'Ack',
+  investigating: 'Tasked',
+  resolved: 'Closed',
+  dismissed: 'Dropped',
+  snoozed: 'Hold',
 }
 
 const esc = (s) =>
@@ -128,7 +128,7 @@ export function inboxRowHtml(row, selectedId) {
     <i class="alert-row-bar" aria-hidden="true"></i>
     <span class="alert-row-main">
       <span class="alert-row-kicker">
-        <span class="alert-type">${event.alert ? 'Alert' : 'Watch'}</span>
+        <span class="alert-type">${event.alert ? 'Tgt' : 'Hold'}</span>
         <span class="alert-rid">${esc(ridFor(event))}</span>
         <span class="alert-ago">${esc(relativeTime(event.publishedAt))}</span>
       </span>
@@ -156,7 +156,7 @@ export function drawerHtml(event, meta) {
 
   return `<header class="alert-drawer-head">
     <div>
-      <span class="gotham-kicker">${event.alert ? 'Alert object' : 'Watch object'}</span>
+      <span class="gotham-kicker">${event.alert ? 'Target' : 'Hold object'}</span>
       <h2>${esc(event.title)}</h2>
       <code class="gotham-rid">${esc(ridFor(event))}</code>
     </div>
@@ -170,7 +170,7 @@ export function drawerHtml(event, meta) {
   </div>
   <p class="alert-brief">${esc(brief.line)}</p>
   <section class="gotham-section">
-    <h3>Properties</h3>
+    <h3>Metadata</h3>
     <div class="gotham-props">
       ${prop('Location', esc(event.place))}
       ${prop('Published', esc(clock(event.publishedAt)))}
@@ -181,7 +181,7 @@ export function drawerHtml(event, meta) {
     </div>
   </section>
   <section class="gotham-section">
-    <h3>Linked objects</h3>
+    <h3>Correlated</h3>
     ${
       asset
         ? `<button type="button" class="gotham-object" data-alert-asset="${esc(asset.id)}">
@@ -198,7 +198,7 @@ export function drawerHtml(event, meta) {
     </div>
   </section>
   <section class="gotham-section">
-    <h3>History</h3>
+    <h3>Track</h3>
     ${
       updates.length
         ? `<ol class="alert-history">${updates
@@ -209,10 +209,10 @@ export function drawerHtml(event, meta) {
   </section>
   </div>
   <footer class="alert-actions">
-    <button type="button" data-alert-action="ack" ${canAck ? '' : 'disabled'}>Acknowledge</button>
-    <button type="button" data-alert-action="investigating" ${canInvestigate ? '' : 'disabled'}>Investigate</button>
-    <button type="button" data-alert-action="snoozed" ${openCase ? '' : 'disabled'}>Snooze</button>
-    <button type="button" class="danger" data-alert-action="dismissed" ${openCase ? '' : 'disabled'}>Dismiss</button>
-    <button type="button" class="primary" data-alert-action="resolved" ${openCase ? '' : 'disabled'}>Resolve</button>
+    <button type="button" data-alert-action="ack" ${canAck ? '' : 'disabled'}>Ack</button>
+    <button type="button" data-alert-action="investigating" ${canInvestigate ? '' : 'disabled'}>Task</button>
+    <button type="button" data-alert-action="snoozed" ${openCase ? '' : 'disabled'}>Hold</button>
+    <button type="button" class="danger" data-alert-action="dismissed" ${openCase ? '' : 'disabled'}>Drop</button>
+    <button type="button" class="primary" data-alert-action="resolved" ${openCase ? '' : 'disabled'}>Close</button>
   </footer>`
 }

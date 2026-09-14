@@ -1,16 +1,16 @@
-/* Palantir Gotham–inspired investigation chrome (Alerts tool only). */
+/* Palantir Gotham + military satellite tasking chrome */
 
 .layout-mission {
   --icon-rail-w: 48px;
-  --gotham-bg: #10151c;
-  --gotham-panel: #171e27;
-  --gotham-panel-2: #1d2630;
-  --gotham-line: rgba(232, 237, 242, 0.1);
-  --gotham-text: #e8edf2;
-  --gotham-muted: #8b9aab;
-  --gotham-ice: #7eb8d4;
-  --gotham-gold: #c9a227;
-  --gotham-danger: #d46a4c;
+  --gotham-bg: #07110c;
+  --gotham-panel: #0c1812;
+  --gotham-panel-2: #122018;
+  --gotham-line: rgba(143, 224, 122, 0.18);
+  --gotham-text: #dcefd4;
+  --gotham-muted: #7f9a78;
+  --gotham-ice: #8fe07a;
+  --gotham-gold: #e0b84a;
+  --gotham-danger: #ff5a3c;
   --map-inset-left: calc(var(--icon-rail-w) + 282px);
 }
 
@@ -176,7 +176,7 @@
 
 .gotham-kicker {
   display: block;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Share Tech Mono', 'IBM Plex Mono', monospace;
   font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.16em;
@@ -572,5 +572,270 @@
 .layout-mission .wire-toast.alert-toast {
   background: var(--gotham-bg);
   border: 1px solid var(--gotham-gold);
+  color: var(--gotham-text);
+}
+
+/* Satellite / military ops mode (Map + Alerts) */
+.layout-mission.is-sat {
+  background: #050a07;
+}
+
+.layout-mission.is-sat .mission-header {
+  background: #07110c;
+  border-bottom: 1px solid rgba(143, 224, 122, 0.22);
+}
+
+.layout-mission.is-sat .main-nav {
+  border-bottom-color: rgba(143, 224, 122, 0.12);
+}
+
+.layout-mission.is-sat .main-nav .brand-mark,
+.layout-mission.is-sat .nav-tabs button:hover {
+  color: #e6f5dc;
+}
+
+.layout-mission.is-sat .ops-mode-badge {
+  color: var(--gotham-ice);
+  border-color: rgba(143, 224, 122, 0.35);
+  background: rgba(14, 40, 20, 0.8);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.layout-mission.is-sat .nav-tabs button {
+  color: #7f9a78;
+}
+
+.layout-mission.is-sat .nav-tabs button.active {
+  color: #07110c;
+  background: var(--gotham-ice);
+}
+
+.layout-mission.is-sat .desk-toolbar {
+  background: #0a1610;
+}
+
+.layout-mission.is-sat .toolbar-group {
+  background: #07110c;
+  border-color: rgba(143, 224, 122, 0.22);
+}
+
+.layout-mission.is-sat .toolbar-group button {
+  color: #7f9a78;
+}
+
+.layout-mission.is-sat .toolbar-group button.active {
+  background: #1d3b22;
+  color: var(--gotham-ice);
+}
+
+.layout-mission.is-sat .search.ops-search {
+  background: #07110c;
+  border-color: rgba(143, 224, 122, 0.28);
+  color: #dcefd4;
+}
+
+.layout-mission.is-sat .risk-score-main strong,
+.layout-mission.is-sat .alerts-cell em {
+  color: #e6f5dc;
+}
+
+.layout-mission.is-sat .alerts-cell,
+.layout-mission.is-sat .risk-chip {
+  background: #0c1812;
+  border-color: rgba(143, 224, 122, 0.2);
+  color: #9bb894;
+}
+
+.layout-mission.is-sat .hud {
+  display: none;
+}
+
+.layout-mission.is-sat .hud-frame {
+  display: block !important;
+  top: calc(var(--desk-offset) + 6px);
+  left: calc(var(--map-inset-left) + 6px);
+  right: calc(var(--map-inset-right) + 6px);
+  bottom: calc(var(--map-bottom) + 6px);
+}
+
+.layout-mission.is-sat .hud-frame .c {
+  border-color: rgba(143, 224, 122, 0.55);
+}
+
+.layout-mission.is-sat .view-toggle {
+  background: rgba(7, 17, 12, 0.92);
+  border: 1px solid rgba(143, 224, 122, 0.28);
+  box-shadow: none;
+}
+
+.layout-mission.is-sat .view-toggle button {
+  color: #7f9a78;
+}
+
+.layout-mission.is-sat .view-toggle button.active {
+  background: #1d3b22;
+  color: var(--gotham-ice);
+}
+
+.layout-mission.is-sat .terrain-btn {
+  background: rgba(7, 17, 12, 0.92);
+  border: 1px solid rgba(143, 224, 122, 0.35);
+  color: var(--gotham-ice);
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.layout-mission.is-sat .time-strip {
+  background: rgba(7, 17, 12, 0.94);
+  border-color: rgba(143, 224, 122, 0.22);
+  color: #9bb894;
+}
+
+.layout-mission.is-sat .time-dock button.active {
+  background: #1d3b22;
+  color: var(--gotham-ice);
+}
+
+.layout-mission.is-sat .feed.ops-feed,
+.layout-mission.is-sat .rail.ops-rail {
+  background: rgba(7, 17, 12, 0.94);
+  border-color: rgba(143, 224, 122, 0.22);
+  color: #c5ddbc;
+}
+
+.sat-hud {
+  position: absolute;
+  top: var(--desk-offset);
+  left: var(--map-inset-left);
+  right: var(--map-inset-right);
+  bottom: var(--map-bottom);
+  z-index: 7;
+  pointer-events: none;
+}
+
+.sat-hud[hidden] {
+  display: none !important;
+}
+
+.sat-scan {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 22, 12, 0.28) 0%, transparent 18%, transparent 82%, rgba(8, 22, 12, 0.45) 100%),
+    repeating-linear-gradient(0deg, rgba(143, 224, 122, 0.035) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+
+.sat-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 72px;
+  height: 72px;
+  transform: translate(-50%, -50%);
+}
+
+.sat-crosshair b {
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(143, 224, 122, 0.55);
+  border-radius: 50%;
+}
+
+.sat-crosshair i:first-of-type,
+.sat-crosshair i:last-of-type {
+  position: absolute;
+  background: rgba(143, 224, 122, 0.7);
+}
+
+.sat-crosshair i:first-of-type {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.sat-crosshair i:last-of-type {
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+.sat-class,
+.sat-readout {
+  position: absolute;
+  font-family: 'Share Tech Mono', 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gotham-ice);
+  text-shadow: 0 0 8px rgba(143, 224, 122, 0.35);
+}
+
+.sat-class {
+  top: 10px;
+  left: 14px;
+  padding: 3px 8px;
+  border: 1px solid rgba(143, 224, 122, 0.35);
+  background: rgba(7, 17, 12, 0.72);
+}
+
+.sat-readout {
+  right: 14px;
+  bottom: 12px;
+  max-width: 52%;
+  text-align: right;
+  color: #dcefd4;
+}
+
+.map-wrap.sat-live .map-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: inset 0 0 120px rgba(5, 16, 8, 0.55);
+  background: radial-gradient(circle at 50% 45%, transparent 42%, rgba(6, 18, 10, 0.38) 100%);
+}
+
+.alerts-inbox,
+.alert-drawer {
+  border-radius: 0;
+  border-color: rgba(143, 224, 122, 0.22);
+}
+
+.alerts-inbox-head,
+.alert-drawer-head {
+  position: relative;
+}
+
+.alerts-inbox-head::before,
+.alert-drawer-head::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid var(--gotham-ice);
+  border-left: 1px solid var(--gotham-ice);
+}
+
+.ops-icon-rail {
+  background: #050c08;
+  border-right: 1px solid rgba(143, 224, 122, 0.22);
+}
+
+.layout-mission.is-sat .wire-toast {
+  background: var(--gotham-bg);
+  border: 1px solid var(--gotham-ice);
   color: var(--gotham-text);
 }

@@ -60,6 +60,7 @@ const state = {
   alertChannel: 'act',
   alertCaseId: null,
   alertMeta: {},
+  prevMapMode: 'globe',
 }
 
 let globe = null
@@ -266,14 +267,19 @@ function syncAlertMeta(d) {
 }
 
 function openAlerts() {
+  if (!state.alertsOpen) state.prevMapMode = state.mapMode
   state.alertsOpen = true
   state.alertChannel = state.alertChannel || 'act'
+  state.mapMode = 'map'
   render()
+  deskMap?.boot()
+  requestAnimationFrame(() => deskMap?.resize())
 }
 
 function closeAlerts() {
   state.alertsOpen = false
   state.alertCaseId = null
+  state.mapMode = state.prevMapMode || 'globe'
   render()
 }
 
@@ -335,7 +341,7 @@ function renderAlerts(d) {
   $('#ch-act').textContent = queues.act.length
   $('#ch-watch').textContent = queues.watch.length
   $('#ch-closed').textContent = queues.closed.length
-  $('#alert-inbox-meta').textContent = `${badgeN} new`
+  $('#alert-inbox-meta').textContent = `${badgeN} active`
   document.querySelectorAll('.alert-channels button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.channel === state.alertChannel)
     btn.onclick = () => {
@@ -349,10 +355,10 @@ function renderAlerts(d) {
   if (!rows.length) {
     const empty =
       state.alertChannel === 'act'
-        ? 'No alert objects require action.'
+        ? 'No active targets in the tasking queue.'
         : state.alertChannel === 'watch'
-          ? 'No linked watch objects.'
-          : 'No closed cases.'
+          ? 'No hold tracks near registered assets.'
+          : 'No closed tasking.'
     list.innerHTML = `<div class="alert-inbox-empty">${empty}</div>`
   } else {
     list.innerHTML = rows.map((row) => inboxRowHtml(row, state.alertCaseId)).join('')
@@ -415,16 +421,33 @@ function renderFeed(d) {
 
 function renderMaps(d) {
   const wrap = $('#map-wrap')
-  wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery' : 'is-satellite'}`
+  wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery sat-live' : 'is-satellite'}`
+  const app = document.querySelector('.layout-mission')
+  app.classList.toggle('is-sat', state.mapMode === 'map')
   $('#globe-stage').className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
   $('#map-stage').className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
   $('#btn-globe').classList.toggle('active', state.mapMode === 'globe')
   $('#btn-map').classList.toggle('active', state.mapMode === 'map')
   $('#globe-tools').hidden = state.mapMode !== 'globe'
 
+  const satHud = $('#sat-hud')
+  if (satHud) {
+    satHud.hidden = state.mapMode !== 'map'
+    const read = $('#sat-readout')
+    if (state.mapMode === 'map' && read) {
+      read.textContent = d.focusPoint
+        ? `TGT ${d.focusPoint.label} · ${fmtLat(d.focusPoint.lat)} ${fmtLng(d.focusPoint.lng)} · EO`
+        : 'SATCOM · WORLD IMAGERY · NO TGT'
+    }
+  }
+
   const pulseEventId = state.scene.pulse ? DEMO.eventId : null
   const highlightAssetId = state.scene.warehouse ? DEMO.assetId : null
   const globeEvents = state.alertsOpen
+    ? d.pool.filter((e) => e.flag === 'IN' && e.linked)
+    : d.filtered
+
+  const mapEvents = state.alertsOpen
     ? d.pool.filter((e) => e.flag === 'IN' && e.linked)
     : d.filtered
 
@@ -462,7 +485,7 @@ function renderMaps(d) {
 
   deskMap?.setActive(state.mapMode === 'map')
   deskMap?.update({
-    events: d.filtered,
+    events: mapEvents,
     assets: INDIA_ASSETS,
     selected: d.selected,
     showRadiusFor: d.showRadiusFor,
@@ -470,13 +493,15 @@ function renderMaps(d) {
     highlightAssetId,
     timeMode: state.timeMode,
     focusPoint: d.focusPoint,
+    tactical: state.mapMode === 'map',
+    caseOpen: Boolean(state.alertsOpen && state.alertCaseId),
   })
 
   const toast = $('#wire-toast')
   if (state.toast) {
     toast.hidden = false
     toast.classList.toggle('alert-toast', Boolean(state.toast.alert))
-    toast.innerHTML = `<span>${state.toast.alert ? 'Object' : 'New'}</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
+    toast.innerHTML = `<span>${state.toast.alert ? 'TGT' : 'New'}</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
   } else toast.hidden = true
 
   document.querySelectorAll('.time-dock button').forEach((btn) => {
@@ -590,8 +615,9 @@ export function initApp() {
   }
   $('#btn-map').onclick = () => {
     state.mapMode = 'map'
-    deskMap.boot()
     render()
+    deskMap.boot()
+    requestAnimationFrame(() => deskMap?.resize())
   }
   document.querySelectorAll('.mode-cluster button[data-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -607,7 +633,10 @@ export function initApp() {
       state.presentation = btn.dataset.present
       if (btn.dataset.present === 'map') {
         state.mapMode = 'map'
+        render()
         deskMap.boot()
+        requestAnimationFrame(() => deskMap?.resize())
+        return
       }
       render()
     })
@@ -643,7 +672,7 @@ export function initApp() {
       state.alertMeta = markAlertUnread(state.alertMeta, item.threadId)
       const host = enrich(state.raw, ASSETS).find((e) => e.id === item.threadId)
       state.toast = host?.alert
-        ? { title: 'Object updated', place: item.text, alert: true }
+        ? { title: 'Target update', place: item.text, alert: true }
         : { title: 'Watch update', place: item.text }
       state.log = [`Update · ${item.threadId}`, ...state.log].slice(0, 6)
     } else {

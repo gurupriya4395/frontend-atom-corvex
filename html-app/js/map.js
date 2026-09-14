@@ -212,7 +212,10 @@ export class DeskMap {
       bounds.extend([target.coords[0] - 0.04, target.coords[1] - 0.04])
       bounds.extend([target.coords[0] + 0.04, target.coords[1] + 0.04])
     }
-    map.fitBounds(bounds, { padding: { top: 96, bottom: 100, left: 300, right: 360 }, maxZoom: 13, duration: 900 })
+    const pad = this.data.tactical
+      ? { top: 88, bottom: 92, left: 28, right: this.data.caseOpen ? 36 : 28 }
+      : { top: 96, bottom: 100, left: 300, right: 360 }
+    map.fitBounds(bounds, { padding: pad, maxZoom: this.data.tactical ? 14.4 : 13, duration: 900 })
   }
 
   zoomOut() {
