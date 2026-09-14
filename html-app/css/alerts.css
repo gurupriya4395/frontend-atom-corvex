@@ -27,6 +27,15 @@
   --map-inset-right: 376px;
 }
 
+.layout-mission .hud {
+  left: calc(var(--map-inset-left) + 12px);
+  bottom: calc(var(--map-bottom) + 10px);
+}
+
+.layout-mission .wire-toast {
+  top: calc(var(--desk-offset) + 52px);
+  z-index: 24;
+}
 .layout-mission.alerts-open .desk-toolbar .alerts-strip,
 .layout-mission.alerts-open .rail.ops-rail,
 .layout-mission.alerts-open .feed.ops-feed {
