@@ -1,6 +1,6 @@
 export const VIEW_LABELS = {
   globe: 'Globe view',
-  map: 'Map view',
+  map: 'Satellite view',
 }
 
 export const CATEGORY_LABELS = {
@@ -32,4 +32,10 @@ export const WORKSPACE_LABELS = {
   assets: 'Assets workspace (panels unchanged)',
   response: 'Response workspace (panels unchanged)',
   insights: 'Insights / reports (panels unchanged)',
+}
+
+export const ALERT_CHANNEL_LABELS = {
+  alerts: 'Alerts',
+  incidents: 'Incidents',
+  closed: 'Closed',
 }

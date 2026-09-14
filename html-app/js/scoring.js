@@ -12,6 +12,40 @@ export function haversineKm([lng1, lat1], [lng2, lat2]) {
 const SEV = { high: 3, medium: 2, low: 1 }
 const CRIT = { high: 3, medium: 2, low: 1 }
 const CAT = { environmental: 0.15, security: 0.2, geopolitical: 0.1 }
+const RANK = { none: 0, low: 1, medium: 2, high: 3 }
+
+export function riskFromEvent(event) {
+  if (event?.severity === 'high' || event?.severity === 'medium' || event?.severity === 'low') return event.severity
+  return 'low'
+}
+
+export function exposureFromHits(hits) {
+  if (!hits?.length) return { level: 'none', primary: null, hits: [] }
+  const primary = hits[0]
+  const km = primary.km
+  const crit = primary.asset.criticality
+  const frac = km / Math.max(primary.asset.radiusKm, 0.001)
+  let level = 'low'
+  if (km <= 3 || (crit === 'high' && km <= 5) || frac <= 0.2) level = 'high'
+  else if (crit === 'high' || km <= 8 || frac <= 0.5) level = 'medium'
+  else level = 'low'
+  return { level, primary, hits }
+}
+
+export function alertPriority(risk, exposure) {
+  if (exposure === 'none') return 'none'
+  const r = RANK[risk] || 0
+  const x = RANK[exposure] || 0
+  if (x >= 3 && r >= 2) return 'high'
+  if (r + x >= 5) return 'high'
+  if (r + x >= 4) return 'medium'
+  if (r + x >= 3) return 'low'
+  return 'none'
+}
+
+export function needsAttention(priority) {
+  return priority === 'high' || priority === 'medium'
+}
 
 export function travelFromHq(km) {
   if (km < 0.4) return { label: 'on the campus', mins: 1, mode: 'on-site' }
@@ -39,10 +73,26 @@ export function nearestHq(event, hqs) {
   }
 }
 
-export function correlate(event, assets) {
-  if (!event.coords) {
-    return { linked: false, hits: [], impact: null, raw: 0, factors: null, alert: false }
+function emptyCorrelation(event) {
+  const risk = riskFromEvent(event)
+  return {
+    linked: false,
+    hits: [],
+    primary: null,
+    impact: null,
+    raw: 0,
+    factors: null,
+    risk,
+    exposure: 'none',
+    alertPriority: 'none',
+    alert: false,
   }
+}
+
+export function correlate(event, assets) {
+  const risk = riskFromEvent(event)
+  if (!event.coords) return emptyCorrelation(event)
+
   const hits = assets
     .filter((asset) => Array.isArray(asset.coords))
     .map((asset) => {
@@ -52,8 +102,11 @@ export function correlate(event, assets) {
     .filter((h) => h.inside)
     .sort((a, b) => a.km - b.km)
 
+  const exp = exposureFromHits(hits)
+  const priority = alertPriority(risk, exp.level)
+
   if (!hits.length) {
-    return { linked: false, hits: [], impact: null, raw: 0, factors: null, alert: false }
+    return { ...emptyCorrelation(event), risk, exposure: 'none', alertPriority: 'none', alert: false }
   }
 
   const primary = hits[0]
@@ -74,29 +127,47 @@ export function correlate(event, assets) {
     inside: `Inside ${primary.asset.radiusKm} km radius`,
     criticality: primary.asset.criticality,
     category: event.domain,
+    risk,
+    exposure: exp.level,
+    alertPriority: priority,
   }
 
-  const alert = impact === 'high' || (impact === 'medium' && primary.asset.criticality === 'high')
-
-  return { linked: true, hits, primary, impact, raw, factors, alert }
+  return {
+    linked: true,
+    hits,
+    primary,
+    impact,
+    raw,
+    factors,
+    risk,
+    exposure: exp.level,
+    alertPriority: priority,
+    alert: needsAttention(priority),
+  }
 }
 
 export function soWhat(event) {
-  if (!event.linked) {
+  const risk = event.risk || riskFromEvent(event)
+  const exposure = event.exposure || 'none'
+  const priority = event.alertPriority || 'none'
+  if (priority === 'none' || !event.alert) {
     return {
-      verdict: 'awareness',
-      line: 'Off our map · awareness only',
-      why: event.why || 'No registered site sits inside this radius.',
-      scoreWhy: 'No score — the event is not correlated to a registered asset.',
+      verdict: exposure === 'none' ? 'event' : 'low',
+      line:
+        exposure === 'none'
+          ? `Event yes · Risk ${risk} · Exposure none · not an alert`
+          : `Event yes · Risk ${risk} · Exposure ${exposure} · Alert ${priority}`,
+      why: event.why || 'Nobody needs to be paged until this sits on one of our assets.',
+      scoreWhy: 'Alert requires both risk and exposure. A serious event with no ATOM footprint stays an event.',
     }
   }
-  const fence = event.primary.inside ? 'inside fence' : 'outside fence'
-  const impact = event.impact || 'low'
+  const asset = event.primary?.asset
+  const km = event.primary ? `${event.primary.km.toFixed(1)} km` : '—'
   return {
-    verdict: event.alert ? 'alert' : 'on-us',
-    line: `${impact.toUpperCase()} · ${event.primary.asset.name} · ${event.primary.km.toFixed(1)} km · ${fence}`,
-    why: event.why || `Impact on ${event.primary.asset.name} at ${event.primary.km.toFixed(1)} km.`,
-    scoreWhy: `${impact === 'high' ? 'High' : impact === 'medium' ? 'Medium' : 'Low'} because: ${event.severity} severity × ${event.primary.asset.criticality}-criticality site × ${event.primary.km.toFixed(1)} km inside a ${event.primary.asset.radiusKm} km fence.`,
+    verdict: 'alert',
+    line: `Alert ${priority} · Risk ${risk} · Exposure ${exposure}${asset ? ` · ${asset.name} ${km}` : ''}`,
+    why: event.why || `${asset?.name || 'An asset'} is exposed. Somebody needs to pay attention.`,
+    scoreWhy: `Factal-style proximity: verified event × ${exposure} exposure on a ${asset?.criticality || 'registered'} site. Dataminr-style correlation turns that into an alert, not another headline.`,
   }
 }
 

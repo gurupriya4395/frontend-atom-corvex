@@ -7,11 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Share+Tech+Mono&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/layout-light.css" />
+    <link rel="stylesheet" href="css/alerts.css" />
     <link rel="stylesheet" href="css/nav.css" />
     <link rel="stylesheet" href="css/markers.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/dist/maplibre-gl.css" />
@@ -49,12 +50,11 @@
             <span id="view-badge" class="ops-mode-badge">Globe view</span>
           </div>
           <nav class="nav-tabs" aria-label="Main navigation">
-            <button type="button" class="active">Critical Events</button>
-            <button type="button">Monitoring</button>
-            <button type="button">Watchlist</button>
-            <button type="button">Alerts</button>
-            <button type="button">Data Analytics</button>
-            <button type="button">Risk Reports</button>
+            <button type="button" class="active" data-nav="critical">Critical Events</button>
+            <button type="button" data-nav="monitoring">Monitoring</button>
+            <button type="button" data-nav="watchlist">Watchlist</button>
+            <button type="button" data-nav="analytics">Data Analytics</button>
+            <button type="button" data-nav="reports">Risk Reports</button>
           </nav>
           <div class="nav-right">
             <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
@@ -70,7 +70,7 @@
             <button type="button" data-mode="history">HISTORICAL</button>
           </div>
           <div class="toolbar-group view-cluster" role="group" aria-label="View mode">
-            <button type="button" data-present="map" class="active">MAP</button>
+            <button type="button" data-present="map" class="active">SAT</button>
             <button type="button" data-present="list">LIST</button>
             <button type="button" data-present="snapshots">SNAPSHOTS</button>
           </div>
@@ -90,12 +90,54 @@
       <div id="workspace-note" hidden></div>
 
       <div class="ops">
+        <nav class="ops-icon-rail" aria-label="Workspace tools">
+          <button type="button" id="rail-filters" class="ops-icon-btn active" title="Filters" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5h16l-6.5 8.2V19l-3 1.5v-7.3L4 5z" />
+            </svg>
+            <span>Filters</span>
+          </button>
+          <button type="button" id="rail-alerts" class="ops-icon-btn" title="Alerts" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9" />
+              <path d="M10 21h4" />
+            </svg>
+            <span>Alerts</span>
+            <em id="alert-badge" class="ops-icon-badge" hidden>0</em>
+          </button>
+        </nav>
+
+        <aside id="alerts-inbox" class="alerts-inbox" hidden>
+          <header class="alerts-inbox-head">
+            <div>
+              <span class="gotham-kicker">Alerts</span>
+              <h2>Needs attention</h2>
+            </div>
+            <span id="alert-inbox-meta" class="gotham-rid"></span>
+          </header>
+          <p class="alert-rule">Event is not an alert. Alert = risk × exposure. Incident = we decided to respond.</p>
+          <div class="alert-channels" role="tablist" aria-label="Alert queues">
+            <button type="button" data-channel="alerts" class="active">Alerts <em id="ch-alerts">0</em></button>
+            <button type="button" data-channel="incidents">Incidents <em id="ch-incidents">0</em></button>
+            <button type="button" data-channel="closed">Closed <em id="ch-closed">0</em></button>
+          </div>
+          <div id="alert-inbox-list" class="alert-inbox-list"></div>
+        </aside>
+
+        <aside id="alert-drawer" class="alert-drawer" hidden></aside>
+
         <div id="map-wrap" class="map-wrap is-satellite">
           <div class="hud-frame" aria-hidden="true">
             <i class="c tl"></i>
             <i class="c tr"></i>
             <i class="c bl"></i>
             <i class="c br"></i>
+          </div>
+          <div id="sat-hud" class="sat-hud" hidden>
+            <div class="sat-scan" aria-hidden="true"></div>
+            <div class="sat-crosshair" aria-hidden="true"><b></b><i></i><i></i></div>
+            <div class="sat-class">UNCLASSIFIED · EO SATELLITE</div>
+            <div id="sat-readout" class="sat-readout">SATCOM · WORLD IMAGERY</div>
           </div>
 
           <div id="globe-stage" class="globe-stage on"></div>
@@ -120,7 +162,7 @@
 
           <div class="view-toggle">
             <button id="btn-globe" type="button" class="active">Globe</button>
-            <button id="btn-map" type="button">Map</button>
+            <button id="btn-map" type="button">Satellite</button>
           </div>
 
           <div id="globe-tools" class="globe-tools">
@@ -206,7 +248,7 @@
         <aside class="feed ops-feed">
           <div class="feed-head">
             <div class="feed-title">
-              <h2>Proximity</h2>
+              <h2>Events</h2>
               <em id="feed-count">0</em>
             </div>
             <div class="feed-meta">
