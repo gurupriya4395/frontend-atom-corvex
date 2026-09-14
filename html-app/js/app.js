@@ -603,20 +603,24 @@ export function initApp() {
     $('#boot').hidden = true
   }, 1800)
 
-  globe = createGlobe($('#globe-stage'), (sel) => {
-    if (!sel) {
-      clearSelection()
-      globe?.zoomOut()
-      return
-    }
-    forceGlobeFly = true
-    if (sel.type === 'event') {
-      const event = enrich(state.raw, ASSETS).find((e) => e.id === sel.id)
-      if (state.alertsOpen && event?.alert) openAlertCase(sel.id)
-      else pickEvent(sel.id)
-    }
-    if (sel.type === 'asset') pickAsset(sel.id)
-  })
+  try {
+    globe = createGlobe($('#globe-stage'), (sel) => {
+      if (!sel) {
+        clearSelection()
+        globe?.zoomOut()
+        return
+      }
+      forceGlobeFly = true
+      if (sel.type === 'event') {
+        const event = enrich(state.raw, ASSETS).find((e) => e.id === sel.id)
+        if (state.alertsOpen && event?.alert) openAlertCase(sel.id)
+        else pickEvent(sel.id)
+      }
+      if (sel.type === 'asset') pickAsset(sel.id)
+    })
+  } catch (err) {
+    console.warn('Globe unavailable', err)
+  }
   new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
   setInterval(() => {
     if (state.mapMode === 'globe') renderMaps(derive())
