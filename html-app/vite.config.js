@@ -7,7 +7,7 @@ const dir = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   root: dir,
   server: {
-    host: '0.0.0.0',
+    host: true,
     port: 5174,
     strictPort: true,
     allowedHosts: true,
