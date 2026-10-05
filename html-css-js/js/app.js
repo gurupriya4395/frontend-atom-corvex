@@ -3,7 +3,6 @@ import { DESK_BEATS } from './sequence.js'
 import { enrich, clock, searchHay } from './scoring.js'
 import { fmtLat, fmtLng, fmtPair } from './coords.js'
 import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS, WORKSPACE_LABELS } from './labels.js'
-import { eventMarkerHtml } from './markers.js'
 import { defaultAlertCopy, headcountOf, peopleNearEvent } from './dispatch.js'
 
 const ALERT_FILTERS = {
@@ -53,7 +52,7 @@ const state = {
   stripFilter: null,
   mapMode: 'globe',
   scene: { pulse: false, flood: false, warehouse: false, distance: false },
-  log: ['Desk ready · waiting for events'],
+  log: ['Desk ready · waiting for situations'],
   freshId: null,
   toast: null,
   latencyMs: 86,
@@ -299,10 +298,10 @@ function renderFeed(d) {
       state.q
         ? `No match for “${state.q}”.`
         : state.timeMode === 'forecast'
-          ? 'No upcoming events. Add one with Add event, or set forecast: true in js/data.js.'
+          ? 'No upcoming signals. Log one, or add forecast: true in js/data.js.'
           : state.timeMode === 'history'
-            ? 'No historical events in this window. Add one with Add event, or set eventAt with daysAgo() in js/data.js.'
-            : 'No live events on the desk right now.'
+            ? 'No closed cases in this window. Log one, or set eventAt with daysAgo() in js/data.js.'
+            : 'No live situations on the desk.'
     $('#event-cards').innerHTML = `<div class="empty">${empty}</div>`
     return
   }
@@ -312,7 +311,8 @@ function renderFeed(d) {
       const windowLabel = windowKind === 'forecast' ? 'upcoming' : windowKind
       const when = clock(ev.eventAt || ev.publishedAt)
       const assetName = ev.primary?.asset?.name
-      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${windowKind === 'live' ? 'ok' : windowKind}">${windowLabel}</span><span class="chip ${ev.severity}">${ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3><p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">Asset affected · ${assetName}</p>` : ''}<p class="card-date">${when}</p></span></button>`
+      const place = (ev.place || '').split(',')[0]
+      return `<button type="button" class="card kind-${ev.kind} sev-${ev.severity} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-body"><div class="card-kicker"><i class="pip ${ev.severity}"></i><span class="place">${place}</span><span class="chip ${windowKind === 'live' ? 'ok' : windowKind}">${windowLabel}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3>${assetName ? `<p class="asset-hit">${assetName} in range</p>` : ''}</span></button>`
     })
     .join('')
   $('#event-cards').querySelectorAll('.card').forEach((btn) => {
@@ -328,7 +328,7 @@ function renderDispatch(d) {
   if (!panel) return
   const event = d.selectedEvent
   if (!event) {
-    panel.innerHTML = `<p class="dispatch-empty">Select an affected area on the left list. You will only message people near that pin.</p>`
+    panel.innerHTML = `<p class="dispatch-empty">Select a situation. You will only message people who sit inside that radius.</p>`
     return
   }
   const people = nearbyFor(event)
@@ -337,13 +337,15 @@ function renderDispatch(d) {
   const n = headcountOf(chosen)
   const radii = [5, 10, 25]
   if (!people.length) {
-    panel.innerHTML = `<p class="dispatch-place"><strong>${event.place}</strong></p>
+    panel.innerHTML = `<div class="dispatch-label">Exposure</div>
+      <p class="dispatch-place"><strong>${event.place.split(',')[0]}</strong></p>
       <div class="radius-row">${radii.map((km) => `<button type="button" data-radius="${km}" class="${state.notifyRadiusKm === km ? 'on' : ''}">${km} km</button>`).join('')}</div>
-      <div class="nobody">No registered people sit inside ${state.notifyRadiusKm} km of this event. Do not send a city-wide alert. Widen the radius or pick another area.</div>`
+      <div class="nobody">No registered people sit inside ${state.notifyRadiusKm} km. Do not broadcast city-wide. Widen the radius or pick another situation.</div>`
     bindDispatch(panel)
     return
   }
-  panel.innerHTML = `<p class="dispatch-place">Affected area · <strong>${event.place}</strong></p>
+  panel.innerHTML = `<div class="dispatch-label">Exposure</div>
+    <p class="dispatch-place"><strong>${event.place.split(',')[0]}</strong> · ${n} in ${state.notifyRadiusKm} km</p>
     <div class="radius-row">${radii.map((km) => `<button type="button" data-radius="${km}" class="${state.notifyRadiusKm === km ? 'on' : ''}">${km} km</button>`).join('')}</div>
     <div class="people-list">${people
       .map((person) => {
@@ -357,11 +359,11 @@ function renderDispatch(d) {
       })
       .join('')}</div>
     <textarea id="dispatch-copy" class="dispatch-copy">${state.draftMessage || defaultAlertCopy(event, chosen)}</textarea>
-    <button type="button" class="send-alert" ${n ? '' : 'disabled'} data-send="1">Send alert to ${n} ${n === 1 ? 'person' : 'people'}</button>
-    <p class="send-note">Only the checked group receives this. Nobody else on the map is notified.</p>
+    <button type="button" class="send-alert" ${n ? '' : 'disabled'} data-send="1">Issue notice to ${n} ${n === 1 ? 'person' : 'people'}</button>
+    <p class="send-note">Only the checked group is notified. Nobody else on the map receives this.</p>
     ${
       state.sentAlerts.length
-        ? `<div class="sent-log"><h4>Sent</h4><ul>${state.sentAlerts
+        ? `<div class="sent-log"><h4>Notices sent</h4><ul>${state.sentAlerts
             .slice(0, 4)
             .map((row) => `<li>${row.n} people · ${row.place} · ${clock(row.at)}</li>`)
             .join('')}</ul></div>`
@@ -415,8 +417,8 @@ function bindDispatch(panel) {
         },
         ...state.sentAlerts,
       ]
-      state.log = [`Alert sent · ${n} nearby · ${event.place.split(',')[0]}`, ...state.log].slice(0, 6)
-      state.toast = { title: `Alert sent to ${n} nearby`, place: event.place }
+      state.log = [`Notice issued · ${n} nearby · ${event.place.split(',')[0]}`, ...state.log].slice(0, 6)
+      state.toast = { title: `Notice issued to ${n} nearby`, place: event.place }
       render()
       setTimeout(() => {
         state.toast = null
@@ -494,7 +496,7 @@ function renderMaps(d) {
   if (toast) {
     if (state.toast) {
       toast.hidden = false
-      toast.innerHTML = `<span>New</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
+      toast.innerHTML = `<span>Desk</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
     } else toast.hidden = true
   }
 
