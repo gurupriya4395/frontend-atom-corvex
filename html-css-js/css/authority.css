@@ -143,7 +143,9 @@
   background: var(--auth-sky);
 }
 
-.layout-authority .view-toggle {
+.layout-authority .map-wrap .view-toggle,
+.layout-authority .map-wrap.is-satellite .view-toggle,
+.layout-authority .map-wrap.is-imagery .view-toggle {
   top: auto;
   bottom: 20px;
   left: 20px;
@@ -154,7 +156,9 @@
   box-shadow: none;
 }
 
-.layout-authority .view-toggle button {
+.layout-authority .map-wrap .view-toggle button,
+.layout-authority .map-wrap.is-satellite .view-toggle button,
+.layout-authority .map-wrap.is-imagery .view-toggle button {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -162,12 +166,14 @@
   color: var(--auth-muted);
 }
 
-.layout-authority .view-toggle button.active {
+.layout-authority .map-wrap .view-toggle button.active,
+.layout-authority .map-wrap.is-satellite .view-toggle button.active,
+.layout-authority .map-wrap.is-imagery .view-toggle button.active {
   background: var(--auth-ink);
   color: var(--auth-cream);
 }
 
-.layout-authority .globe-tools {
+.layout-authority .map-wrap .globe-tools {
   top: auto;
   bottom: 20px;
   left: 150px;
