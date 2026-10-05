@@ -18,11 +18,25 @@ const ALERT_FILTERS = {
 }
 
 const TWO_DAYS_MS = 2 * 86400 * 1000
-const isForecastEvent = (e) => Boolean(e.forecast) || e.eventAt > Date.now()
+const LIVE_MS = 24 * 3600 * 1000
+const eventStamp = (e) => e.eventAt || e.publishedAt || 0
+const isUpcomingEvent = (e) => Boolean(e.forecast) || eventStamp(e) > Date.now()
+const isForecastEvent = isUpcomingEvent
+const isHistoryEvent = (e) => !isUpcomingEvent(e) && eventStamp(e) < Date.now() - LIVE_MS
+const isLiveEvent = (e) => !isUpcomingEvent(e) && !isHistoryEvent(e)
 const inNextTwoDays = (e) => {
-  const at = e.eventAt || e.publishedAt
+  const at = eventStamp(e)
   return at > Date.now() && at <= Date.now() + TWO_DAYS_MS
 }
+
+const EVENT_CITIES = [
+  { name: 'Mumbai, Maharashtra, India', coords: [72.869, 19.089] },
+  { name: 'Pune, Maharashtra, India', coords: [73.841, 18.531] },
+  { name: 'Nashik, Maharashtra, India', coords: [73.7898, 19.9975] },
+  { name: 'Chennai, Tamil Nadu, India', coords: [80.29, 13.1] },
+  { name: 'Gurugram, Haryana, India', coords: [77.072, 28.47] },
+  { name: 'Kochi, Kerala, India', coords: [76.2673, 9.9312] },
+]
 
 const state = {
   raw: [...EVENTS],
@@ -65,9 +79,9 @@ function enriched() {
 function derive() {
   const pool = enriched()
   const timed = pool.filter((e) => {
-    if (state.timeMode === 'forecast') return isForecastEvent(e) && inNextTwoDays(e)
-    if (state.timeMode === 'history') return !isForecastEvent(e)
-    return !isForecastEvent(e)
+    if (state.timeMode === 'forecast') return isUpcomingEvent(e)
+    if (state.timeMode === 'history') return isHistoryEvent(e)
+    return isLiveEvent(e)
   })
   const needle = state.q.trim().toLowerCase()
   const listed = timed.filter((e) => {
@@ -187,6 +201,9 @@ function renderChrome(d) {
   const monitorBar = $('#monitor-bar')
   if (monitorBar) monitorBar.hidden = state.workspace !== 'monitor'
   if ($('#view-badge')) $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
+  document.querySelectorAll('#time-windows button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === state.timeMode)
+  })
 
   if (!$('#alert-cells')) return
 
@@ -269,23 +286,33 @@ function renderRail(d) {
 }
 
 function renderFeed(d) {
-  const n = state.timeMode === 'forecast'
-    ? d.pool.filter((e) => e.flag === 'IN' && isForecastEvent(e) && inNextTwoDays(e) && state.cats[e.category] && state.sevs[e.severity]).length
-    : d.pool.filter((e) => e.flag === 'IN' && !isForecastEvent(e) && state.cats[e.category] && state.sevs[e.severity]).length
+  const n = d.filtered.length
   $('#feed-count').textContent = n
-  if ($('#feed-mode')) $('#feed-mode').textContent = state.timeMode === 'forecast' ? 'Forecast · 2 days' : 'Live feed'
+  if ($('#feed-mode')) {
+    $('#feed-mode').textContent =
+      state.timeMode === 'forecast' ? 'Upcoming' : state.timeMode === 'history' ? 'History' : 'Live'
+  }
   if ($('#feed-clock')) $('#feed-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false })
 
   if (!d.filtered.length) {
-    $('#event-cards').innerHTML = `<div class="empty">${state.q ? `No match for “${state.q}”.` : state.timeMode === 'forecast' ? 'No forecast events in the next 2 days.' : 'No live events on the desk right now.'}</div>`
+    const empty =
+      state.q
+        ? `No match for “${state.q}”.`
+        : state.timeMode === 'forecast'
+          ? 'No upcoming events. Add one with Add event, or set forecast: true in js/data.js.'
+          : state.timeMode === 'history'
+            ? 'No historical events in this window. Add one with Add event, or set eventAt with daysAgo() in js/data.js.'
+            : 'No live events on the desk right now.'
+    $('#event-cards').innerHTML = `<div class="empty">${empty}</div>`
     return
   }
   $('#event-cards').innerHTML = d.filtered
     .map((ev, i) => {
-      const forecast = isForecastEvent(ev)
+      const windowKind = isUpcomingEvent(ev) ? 'forecast' : isHistoryEvent(ev) ? 'history' : 'live'
+      const windowLabel = windowKind === 'forecast' ? 'upcoming' : windowKind
       const when = clock(ev.eventAt || ev.publishedAt)
       const assetName = ev.primary?.asset?.name
-      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${forecast ? 'forecast' : 'ok'}">${forecast ? 'forecast' : 'live'}</span><span class="chip ${ev.severity}">${ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3><p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">Asset affected · ${assetName}</p>` : ''}<p class="card-date">${when}</p></span></button>`
+      return `<button type="button" class="card kind-${ev.kind} ${state.selectedId === ev.id ? 'selected' : ''} ${state.freshId === ev.id ? 'fresh' : ''}" data-id="${ev.id}" style="animation-delay:${Math.min(i, 8) * 40}ms"><span class="card-mark">${eventMarkerHtml(ev)}</span><span class="card-body"><div class="card-kicker"><span class="chip ${windowKind === 'live' ? 'ok' : windowKind}">${windowLabel}</span><span class="chip ${ev.severity}">${ev.severity}</span><span class="ago">${when}</span></div><h3>${ev.title}</h3><p class="why">${ev.summary || ev.why || ''}</p>${assetName ? `<p class="asset-hit">Asset affected · ${assetName}</p>` : ''}<p class="card-date">${when}</p></span></button>`
     })
     .join('')
   $('#event-cards').querySelectorAll('.card').forEach((btn) => {
@@ -483,9 +510,20 @@ function renderMaps(d) {
 
 function render() {
   const d = derive()
+  if (state.selectedId && !d.filtered.some((e) => e.id === state.selectedId)) {
+    state.selectedId = null
+    state.selectedAssetId = null
+    state.selectedPeople = {}
+    state.draftMessage = ''
+  }
   if (!state.selectedId && !state.selectedAssetId) {
     const first = d.filtered.find((e) => e.linked) || d.filtered[0]
-    if (first) state.selectedId = first.id
+    if (first) {
+      state.selectedId = first.id
+      const people = nearbyFor(first)
+      state.selectedPeople = Object.fromEntries(people.map((p) => [p.id, true]))
+      state.draftMessage = defaultAlertCopy(first, people)
+    }
   }
   const d2 = derive()
   renderChrome(d2)
@@ -493,6 +531,37 @@ function render() {
   renderFeed(d2)
   renderDispatch(d2)
   renderMaps(d2)
+}
+
+function addCustomEvent({ title, place, window, severity, category }) {
+  const city = EVENT_CITIES.find((c) => c.name === place) || EVENT_CITIES[0]
+  const now = Date.now()
+  const eventAt =
+    window === 'forecast' ? now + 36 * 3600 * 1000 : window === 'history' ? now - 5 * 86400 * 1000 : now - 15 * 60 * 1000
+  const kind = category === 'environmental' ? 'storm' : category === 'security' ? 'security' : 'protest'
+  const next = {
+    id: `ev-custom-${now}`,
+    kind,
+    category,
+    domain: 'Operator',
+    title: title.trim(),
+    summary: 'Added from the authority desk.',
+    place: city.name,
+    flag: 'IN',
+    coords: city.coords,
+    severity,
+    source: 'Authority desk',
+    publishedAt: window === 'forecast' ? now : eventAt,
+    eventAt,
+    forecast: window === 'forecast',
+    why: 'Operator-added event.',
+  }
+  state.raw = [next, ...state.raw]
+  state.timeMode = window === 'forecast' ? 'forecast' : window === 'history' ? 'history' : 'live'
+  state.q = ''
+  const search = $('#search')
+  if (search) search.value = ''
+  pickEvent(next.id)
 }
 
 function runDesk() {
@@ -621,6 +690,36 @@ export function initApp() {
       deskMap?.boot()
       render()
     }
+  }
+  document.querySelectorAll('#time-windows button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.timeMode = btn.dataset.mode
+      if (btn.dataset.mode === 'live') state.monitorWindow = 'live'
+      if (btn.dataset.mode === 'forecast') state.monitorWindow = 'upcoming'
+      if (btn.dataset.mode === 'history') state.monitorWindow = 'history'
+      render()
+    })
+  })
+  const addBtn = $('#btn-add-event')
+  const addForm = $('#add-event-form')
+  if (addBtn && addForm) {
+    addBtn.onclick = () => {
+      addForm.hidden = !addForm.hidden
+    }
+    addForm.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const title = addForm.title.value.trim()
+      if (!title) return
+      addCustomEvent({
+        title,
+        place: addForm.place.value,
+        window: addForm.when.value,
+        severity: addForm.severity.value,
+        category: addForm.category.value,
+      })
+      addForm.reset()
+      addForm.hidden = true
+    })
   }
   document.querySelectorAll('.menu-nav button').forEach((btn) => {
     btn.addEventListener('click', () => {

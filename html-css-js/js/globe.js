@@ -7,13 +7,16 @@ const R = 100
 
 export function createGlobe(hostEl, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#070b10')
+  scene.background = new THREE.Color('#ffffff')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 60, 320)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
+  renderer.setClearColor('#ffffff', 1)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.toneMapping = THREE.NoToneMapping
   renderer.domElement.style.display = 'block'
   hostEl.appendChild(renderer.domElement)
 
@@ -29,53 +32,36 @@ export function createGlobe(hostEl, getOnSelect) {
   controls.enablePan = false
   controls.target.set(0, 0, 0)
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.35))
-  const sun = new THREE.DirectionalLight(0xfff8f0, 1.65)
-  sun.position.set(-70, 120, 100)
-  scene.add(sun)
-  const fill = new THREE.DirectionalLight(0xc8dcff, 0.42)
-  fill.position.set(110, -30, -80)
-  scene.add(fill)
-  const rim = new THREE.DirectionalLight(0xd8c4ff, 0.28)
-  rim.position.set(-130, 30, -110)
-  scene.add(rim)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.2))
 
-  const globeMat = new THREE.MeshPhongMaterial({
+  const globeMat = new THREE.MeshBasicMaterial({
     map: paintLightEarth(),
-    color: 0xe8eef4,
-    emissive: 0x0a1018,
-    emissiveIntensity: 0.12,
-    shininess: 22,
-    specular: 0x556677,
+    color: 0xffffff,
   })
-  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 72), globeMat)
   scene.add(globe)
 
-  new THREE.TextureLoader().load(
-    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
-    (remote) => {
-      remote.colorSpace = THREE.SRGBColorSpace
-      remote.anisotropy = 8
-      globeMat.map = remote
-      globeMat.needsUpdate = true
-    },
-    undefined,
-    () => {
-      new THREE.TextureLoader().load(
-        'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-day.jpg',
-        (fallback) => {
-          fallback.colorSpace = THREE.SRGBColorSpace
-          globeMat.map = fallback
-          globeMat.needsUpdate = true
-        },
-      )
-    },
-  )
+  const cloudMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const clouds = new THREE.Mesh(new THREE.SphereGeometry(R * 1.012, 96, 72), cloudMat)
+  scene.add(clouds)
+  loadBlueMarble(globeMat, cloudMat)
 
   scene.add(
     new THREE.Mesh(
-      new THREE.SphereGeometry(R * 1.045, 48, 32),
-      new THREE.MeshBasicMaterial({ color: 0x3d6a8a, transparent: true, opacity: 0.1, side: THREE.BackSide }),
+      new THREE.SphereGeometry(R * 1.04, 64, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0x8ec4e8,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.BackSide,
+        depthWrite: false,
+      }),
     ),
   )
 
@@ -91,6 +77,7 @@ export function createGlobe(hostEl, getOnSelect) {
     raf = requestAnimationFrame(tick)
     if (paused) return
     controls.update()
+    clouds.rotation.y += 0.00008
     _camDir.copy(camera.position).normalize()
     overlay.traverse((obj) => {
       if (!obj.element) return
@@ -265,6 +252,33 @@ function destPoint(lat, lng, km, bearingDeg) {
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI]
 }
 
+function colorizeTexture(tex) {
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  tex.needsUpdate = true
+  return tex
+}
+
+function loadBlueMarble(globeMat, cloudMat) {
+  const loader = new THREE.TextureLoader()
+  const planets = (file) => `https://cdn.jsdelivr.net/gh/mrdoob/three.js@r185/examples/textures/planets/${file}`
+  const globeImg = (file) => `https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/${file}`
+  const applyDay = (tex) => {
+    globeMat.map = colorizeTexture(tex)
+    globeMat.needsUpdate = true
+  }
+  loader.load(planets('earth_atmos_2048.jpg'), applyDay, undefined, () => {
+    loader.load(globeImg('earth-blue-marble.jpg'), applyDay, undefined, () => {
+      loader.load(globeImg('earth-day.jpg'), applyDay)
+    })
+  })
+  loader.load(planets('earth_clouds_1024.png'), (tex) => {
+    cloudMat.map = colorizeTexture(tex)
+    cloudMat.opacity = 0.82
+    cloudMat.needsUpdate = true
+  })
+}
+
 function paintLightEarth() {
   const w = 2048
   const h = 1024
@@ -273,9 +287,9 @@ function paintLightEarth() {
   c.height = h
   const g = c.getContext('2d')
   const ocean = g.createLinearGradient(0, 0, 0, h)
-  ocean.addColorStop(0, '#8ec0de')
-  ocean.addColorStop(0.5, '#6ba8cc')
-  ocean.addColorStop(1, '#5a96bc')
+  ocean.addColorStop(0, '#1c6aa8')
+  ocean.addColorStop(0.45, '#0b4f86')
+  ocean.addColorStop(1, '#083a66')
   g.fillStyle = ocean
   g.fillRect(0, 0, w, h)
   const land = [
