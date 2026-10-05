@@ -15,6 +15,9 @@ export function createGlobe(hostEl, getOnSelect) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
   renderer.setClearColor('#dceaf6', 1)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+  renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.05
   renderer.domElement.style.display = 'block'
   hostEl.appendChild(renderer.domElement)
 
@@ -30,53 +33,48 @@ export function createGlobe(hostEl, getOnSelect) {
   controls.enablePan = false
   controls.target.set(0, 0, 0)
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.35))
-  const sun = new THREE.DirectionalLight(0xfff8f0, 1.65)
-  sun.position.set(-70, 120, 100)
+  scene.add(new THREE.AmbientLight(0xb7c8d8, 0.42))
+  const sun = new THREE.DirectionalLight(0xfff4e6, 2.15)
+  sun.position.set(-80, 40, 120)
   scene.add(sun)
-  const fill = new THREE.DirectionalLight(0xc8dcff, 0.42)
-  fill.position.set(110, -30, -80)
+  const fill = new THREE.DirectionalLight(0x8fb4d4, 0.28)
+  fill.position.set(90, -20, -70)
   scene.add(fill)
-  const rim = new THREE.DirectionalLight(0xd8c4ff, 0.28)
-  rim.position.set(-130, 30, -110)
-  scene.add(rim)
 
   const globeMat = new THREE.MeshPhongMaterial({
     map: paintLightEarth(),
     color: 0xffffff,
-    emissive: 0xdde6ef,
-    emissiveIntensity: 0.08,
+    emissive: 0x000000,
     shininess: 18,
-    specular: 0x9aabb8,
+    specular: 0x1a3344,
   })
-  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 72), globeMat)
   scene.add(globe)
-
-  new THREE.TextureLoader().load(
-    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
-    (remote) => {
-      remote.colorSpace = THREE.SRGBColorSpace
-      remote.anisotropy = 8
-      globeMat.map = remote
-      globeMat.needsUpdate = true
-    },
-    undefined,
-    () => {
-      new THREE.TextureLoader().load(
-        'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-day.jpg',
-        (fallback) => {
-          fallback.colorSpace = THREE.SRGBColorSpace
-          globeMat.map = fallback
-          globeMat.needsUpdate = true
-        },
-      )
-    },
-  )
+  loadRealisticEarth(globeMat)
 
   scene.add(
     new THREE.Mesh(
-      new THREE.SphereGeometry(R * 1.045, 48, 32),
-      new THREE.MeshBasicMaterial({ color: 0xc5d8ea, transparent: true, opacity: 0.28, side: THREE.BackSide }),
+      new THREE.SphereGeometry(R * 1.018, 64, 48),
+      new THREE.MeshPhongMaterial({
+        color: 0x6ea8d8,
+        transparent: true,
+        opacity: 0.11,
+        shininess: 8,
+        specular: 0x112233,
+        depthWrite: false,
+      }),
+    ),
+  )
+  scene.add(
+    new THREE.Mesh(
+      new THREE.SphereGeometry(R * 1.06, 48, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0x9ec4e6,
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.BackSide,
+        depthWrite: false,
+      }),
     ),
   )
 
@@ -266,6 +264,38 @@ function destPoint(lat, lng, km, bearingDeg) {
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI]
 }
 
+function colorizeTexture(tex) {
+  tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
+  tex.needsUpdate = true
+  return tex
+}
+
+function loadRealisticEarth(globeMat) {
+  const loader = new THREE.TextureLoader()
+  const img = (file) => `https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/${file}`
+  const applyDay = (tex) => {
+    globeMat.map = colorizeTexture(tex)
+    globeMat.needsUpdate = true
+  }
+  loader.load(img('earth-blue-marble.jpg'), applyDay, undefined, () => {
+    loader.load(img('earth-day.jpg'), applyDay)
+  })
+  loader.load(img('earth-topology.png'), (bump) => {
+    bump.anisotropy = 8
+    globeMat.bumpMap = bump
+    globeMat.bumpScale = 1.8
+    globeMat.needsUpdate = true
+  })
+  loader.load(img('earth-water.png'), (spec) => {
+    spec.anisotropy = 8
+    globeMat.specularMap = spec
+    globeMat.specular = new THREE.Color(0x88c4e8)
+    globeMat.shininess = 28
+    globeMat.needsUpdate = true
+  })
+}
+
 function paintLightEarth() {
   const w = 2048
   const h = 1024
@@ -274,9 +304,9 @@ function paintLightEarth() {
   c.height = h
   const g = c.getContext('2d')
   const ocean = g.createLinearGradient(0, 0, 0, h)
-  ocean.addColorStop(0, '#8ec0de')
-  ocean.addColorStop(0.5, '#6ba8cc')
-  ocean.addColorStop(1, '#5a96bc')
+  ocean.addColorStop(0, '#1c6aa8')
+  ocean.addColorStop(0.45, '#0b4f86')
+  ocean.addColorStop(1, '#083a66')
   g.fillStyle = ocean
   g.fillRect(0, 0, w, h)
   const land = [
