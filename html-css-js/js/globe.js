@@ -32,22 +32,21 @@ export function createGlobe(hostEl, getOnSelect) {
   controls.enablePan = false
   controls.target.set(0, 0, 0)
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.4))
-  const key = new THREE.DirectionalLight(0xffffff, 0.38)
-  scene.add(key)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.2))
 
-  const globeMat = new THREE.MeshLambertMaterial({
+  const globeMat = new THREE.MeshBasicMaterial({
     map: paintLightEarth(),
     color: 0xffffff,
   })
   const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 72), globeMat)
   scene.add(globe)
 
-  const cloudMat = new THREE.MeshLambertMaterial({
+  const cloudMat = new THREE.MeshBasicMaterial({
     color: 0xffffff,
     transparent: true,
     opacity: 0,
     depthWrite: false,
+    blending: THREE.AdditiveBlending,
   })
   const clouds = new THREE.Mesh(new THREE.SphereGeometry(R * 1.012, 96, 72), cloudMat)
   scene.add(clouds)
@@ -78,7 +77,6 @@ export function createGlobe(hostEl, getOnSelect) {
     raf = requestAnimationFrame(tick)
     if (paused) return
     controls.update()
-    key.position.copy(camera.position)
     clouds.rotation.y += 0.00008
     _camDir.copy(camera.position).normalize()
     overlay.traverse((obj) => {
