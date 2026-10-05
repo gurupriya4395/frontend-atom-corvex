@@ -1,0 +1,70 @@
+/* Menu labels only — keeps the existing ops topbar and panels */
+
+.ops-topbar .menu-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.ops-topbar .menu-nav button {
+  background: transparent;
+  border: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  border-radius: 6px;
+}
+
+.ops-topbar .menu-nav button:hover {
+  color: #e2e8f0;
+}
+
+.ops-topbar .menu-nav button.active {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.menu-subnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  background: linear-gradient(180deg, rgba(10, 14, 20, 0.94) 0%, rgba(10, 14, 20, 0.82) 100%);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+}
+
+.menu-subnav-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.menu-subnav-group {
+  display: flex;
+  gap: 2px;
+}
+
+.menu-subnav-group:last-child {
+  margin-left: auto;
+}
+
+.menu-subnav button {
+  background: transparent;
+  border: 0;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  border-radius: 6px;
+}
+
+.menu-subnav button.active {
+  color: #e0f2fe;
+  background: rgba(56, 189, 248, 0.16);
+}

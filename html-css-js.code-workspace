@@ -1,0 +1,14 @@
+{
+  "folders": [
+    {
+      "path": "html-css-js",
+      "name": "HTML CSS JS"
+    }
+  ],
+  "settings": {
+    "workbench.sideBar.location": "right",
+    "files.exclude": {
+      "**/node_modules": true
+    }
+  }
+}
