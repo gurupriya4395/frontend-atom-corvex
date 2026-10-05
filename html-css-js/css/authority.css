@@ -1,5 +1,9 @@
 /* Authority desk: map is the canvas, notify-nearby lives on the right */
 
+[hidden] {
+  display: none !important;
+}
+
 .layout-authority {
   --desk-offset: 0px;
   --chrome-stack-h: 0px;
@@ -327,4 +331,29 @@
   font-weight: 500;
   font-size: 10px;
   color: var(--auth-muted);
+}
+
+.boot[hidden] {
+  display: none !important;
+}
+
+.globe-fallback {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: #dce7f3;
+}
+
+.globe-fallback strong {
+  font-size: 18px;
+}
+
+.globe-fallback p {
+  margin: 0;
+  font-size: 13px;
+  color: #9aa8b8;
+  max-width: 280px;
 }

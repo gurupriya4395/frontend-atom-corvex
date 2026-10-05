@@ -1,4 +1,4 @@
-import { Map, Marker, NavigationControl, AttributionControl, LngLatBounds } from 'maplibre-gl'
+import { Map, Marker, NavigationControl, AttributionControl, LngLatBounds } from 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/+esm'
 import { eventMarkerHtml, eventBriefHtml, assetMarkerHtml } from './markers.js'
 import { fmtLat, fmtLng } from './coords.js'
 import { MUMBAI_FLOOD_ZONE } from './data.js'

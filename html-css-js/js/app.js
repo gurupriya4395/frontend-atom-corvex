@@ -4,8 +4,6 @@ import { enrich, clock, searchHay } from './scoring.js'
 import { fmtLat, fmtLng, fmtPair } from './coords.js'
 import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCUS_TYPE_LABELS, WORKSPACE_LABELS } from './labels.js'
 import { eventMarkerHtml } from './markers.js'
-import { createGlobe } from './globe.js'
-import { DeskMap } from './map.js'
 import { defaultAlertCopy, headcountOf, peopleNearEvent } from './dispatch.js'
 
 const ALERT_FILTERS = {
@@ -191,25 +189,6 @@ function renderChrome(d) {
   if ($('#view-badge')) $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
 
   if (!$('#alert-cells')) return
-
-  document.querySelectorAll('.menu-nav button').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.workspace === state.workspace)
-  })
-  document.querySelectorAll('.monitor-windows button').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.window === state.monitorWindow)
-  })
-  document.querySelectorAll('.monitor-present button').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.present === state.presentation)
-  })
-  const note = $('#workspace-note')
-  if (note) {
-    const text = WORKSPACE_LABELS[state.workspace] || ''
-    note.textContent = text
-    note.hidden = !text
-  }
-  const monitorBar = $('#monitor-bar')
-  if (monitorBar) monitorBar.hidden = state.workspace !== 'monitor'
-  if ($('#view-badge')) $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
 
   const stats = {
     total: state.timeMode === 'forecast' ? d.indiaPool.filter((e) => isForecastEvent(e) && inNextTwoDays(e)).length : d.indiaPool.filter((e) => !isForecastEvent(e)).length,
@@ -419,13 +398,20 @@ function bindDispatch(panel) {
     }
   }
 }
+
+function renderMaps(d) {
   const wrap = $('#map-wrap')
+  if (!wrap) return
   wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery' : 'is-satellite'}`
-  $('#globe-stage').className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
-  $('#map-stage').className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
-  $('#btn-globe').classList.toggle('active', state.mapMode === 'globe')
-  $('#btn-map').classList.toggle('active', state.mapMode === 'map')
-  $('#globe-tools').hidden = state.mapMode !== 'globe'
+  const globeStage = $('#globe-stage')
+  const mapStage = $('#map-stage')
+  if (globeStage) globeStage.className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
+  if (mapStage) mapStage.className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
+  const btnGlobe = $('#btn-globe')
+  const btnMap = $('#btn-map')
+  if (btnGlobe) btnGlobe.classList.toggle('active', state.mapMode === 'globe')
+  if (btnMap) btnMap.classList.toggle('active', state.mapMode === 'map')
+  if ($('#globe-tools')) $('#globe-tools').hidden = state.mapMode !== 'globe'
 
   const pulseEventId = state.scene.pulse ? DEMO.eventId : null
   const highlightAssetId = state.scene.warehouse ? DEMO.assetId : null
@@ -450,8 +436,8 @@ function bindDispatch(panel) {
       }
     }
     const pov = globe?.pointOfView()
-    if (pov) {
-      const tel = $('#globe-telemetry')
+    const tel = $('#globe-telemetry')
+    if (pov && tel) {
       if (d.focusPoint) {
         tel.innerHTML = `<span>Camera</span><b class="telemetry-target">${d.focusPoint.label}</b><span class="telemetry-sub">${fmtLat(pov.lat)} ${fmtLng(pov.lng)} · alt ${pov.alt.toFixed(1)}</span><i></i>`
       } else {
@@ -473,10 +459,12 @@ function bindDispatch(panel) {
   })
 
   const toast = $('#wire-toast')
-  if (state.toast) {
-    toast.hidden = false
-    toast.innerHTML = `<span>New</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
-  } else toast.hidden = true
+  if (toast) {
+    if (state.toast) {
+      toast.hidden = false
+      toast.innerHTML = `<span>New</span><b>${state.toast.title}</b><em>${state.toast.place}</em>`
+    } else toast.hidden = true
+  }
 
   document.querySelectorAll('.time-dock button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.mode === state.timeMode)
@@ -485,7 +473,7 @@ function bindDispatch(panel) {
       render()
     }
   })
-  $('#time-head').className = `head ${state.timeMode}`
+  if ($('#time-head')) $('#time-head').className = `head ${state.timeMode}`
 }
 
 function render() {
@@ -532,44 +520,60 @@ function runDesk() {
   render()
 }
 
-export function initApp() {
-  setTimeout(() => {
-    state.boot = false
-    $('#boot').hidden = true
-  }, 1800)
+function showGlobeFallback() {
+  const el = $('#globe-stage')
+  if (!el || el.querySelector('canvas')) return
+  el.innerHTML = `<div class="globe-fallback"><strong>Affected area map</strong><p>Use the list on the right to pick an event and send an alert to people nearby.</p></div>`
+}
 
-  try {
-    globe = createGlobe($('#globe-stage'), (sel) => {
-      if (!sel) {
-        clearSelection()
-        return
-      }
-      if (sel.type === 'event') pickEvent(sel.id)
-      if (sel.type === 'asset') pickAsset(sel.id)
-    })
-  } catch (err) {
-    console.warn('Globe unavailable', err)
+function onMapSelect(sel) {
+  if (!sel) {
+    clearSelection()
+    return
   }
-  new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
+  if (sel.type === 'event') pickEvent(sel.id)
+  if (sel.type === 'asset') pickAsset(sel.id)
+}
+
+export function initApp() {
+  const boot = $('#boot')
+  if (boot) boot.hidden = true
+  state.boot = false
+  render()
+
+  import('./globe.js')
+    .then(({ createGlobe }) => {
+      try {
+        globe = createGlobe($('#globe-stage'), onMapSelect)
+        globe?.resize()
+      } catch (err) {
+        console.warn('Globe unavailable', err)
+        showGlobeFallback()
+      }
+    })
+    .catch((err) => {
+      console.warn('Globe failed to load', err)
+      showGlobeFallback()
+    })
+
+  if ($('#globe-stage')) new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
   setInterval(() => {
     if (state.mapMode === 'globe') renderMaps(derive())
   }, 240)
 
-  deskMap = new DeskMap($('#terrain-canvas'), $('#desk-hud'), (sel) => {
-    if (!sel) {
-      clearSelection()
-      return
-    }
-    if (sel.type === 'event') pickEvent(sel.id)
-    if (sel.type === 'asset') pickAsset(sel.id)
-  })
-  new ResizeObserver(() => deskMap?.resize()).observe($('#terrain-canvas'))
+  import('./map.js')
+    .then(({ DeskMap }) => {
+      deskMap = new DeskMap($('#terrain-canvas'), $('#desk-hud'), onMapSelect)
+      if ($('#terrain-canvas')) new ResizeObserver(() => deskMap?.resize()).observe($('#terrain-canvas'))
+      render()
+    })
+    .catch((err) => console.warn('Map failed to load', err))
 
-  $('#search').addEventListener('input', (e) => {
+  $('#search')?.addEventListener('input', (e) => {
     state.q = e.target.value
     render()
   })
-  $('#search').addEventListener('keydown', (e) => {
+  $('#search')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const d = derive()
       if (d.filtered[0]) pickEvent(d.filtered[0].id)
@@ -577,14 +581,20 @@ export function initApp() {
   })
   if ($('#btn-demo')) $('#btn-demo').onclick = runDesk
   if ($('#btn-replay')) $('#btn-replay').onclick = runDesk
-  $('#btn-globe').onclick = () => {
-    state.mapMode = 'globe'
-    render()
+  const btnGlobe = $('#btn-globe')
+  if (btnGlobe) {
+    btnGlobe.onclick = () => {
+      state.mapMode = 'globe'
+      render()
+    }
   }
-  $('#btn-map').onclick = () => {
-    state.mapMode = 'map'
-    deskMap.boot()
-    render()
+  const btnMap = $('#btn-map')
+  if (btnMap) {
+    btnMap.onclick = () => {
+      state.mapMode = 'map'
+      deskMap?.boot()
+      render()
+    }
   }
   document.querySelectorAll('.menu-nav button').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -611,16 +621,23 @@ export function initApp() {
     })
   })
 
-  $('#btn-zoom-globe').onclick = () => {
-    clearSelection()
-    globe?.zoomOut()
+  const zoomGlobe = $('#btn-zoom-globe')
+  if (zoomGlobe) {
+    zoomGlobe.onclick = () => {
+      clearSelection()
+      globe?.zoomOut()
+    }
   }
-  $('#btn-zoom-map').onclick = () => deskMap?.zoomOut()
+  const zoomMap = $('#btn-zoom-map')
+  if (zoomMap) zoomMap.onclick = () => deskMap?.zoomOut()
 
-  $('#time-track').onclick = (e) => {
-    const x = e.offsetX / e.currentTarget.clientWidth
-    state.timeMode = x > 0.5 ? 'forecast' : 'live'
-    render()
+  const timeTrack = $('#time-track')
+  if (timeTrack) {
+    timeTrack.onclick = (e) => {
+      const x = e.offsetX / e.currentTarget.clientWidth
+      state.timeMode = x > 0.5 ? 'forecast' : 'live'
+      render()
+    }
   }
 
   setInterval(() => renderChrome(derive()), 1000)
