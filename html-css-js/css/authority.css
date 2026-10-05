@@ -15,7 +15,7 @@
   --auth-line: #d9e1ea;
   --auth-accent: #2f6fed;
   --auth-danger: #d6453d;
-  --auth-sky: #dceaf6;
+  --auth-sky: #ffffff;
   background: #e8edf3;
 }
 
@@ -54,8 +54,7 @@
 }
 
 .layout-authority .globe-stage {
-  background:
-    radial-gradient(circle at 50% 42%, #eef5fb 0%, var(--auth-sky) 48%, #c9dcea 100%);
+  background: #ffffff;
 }
 
 .layout-authority .map-wrap,
@@ -427,8 +426,7 @@
   padding: 24px;
   text-align: center;
   color: #1b2430;
-  background:
-    radial-gradient(circle at 50% 42%, #eef5fb 0%, #dceaf6 48%, #c9dcea 100%);
+  background: #ffffff;
 }
 
 .globe-fallback strong {

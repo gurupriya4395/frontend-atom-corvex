@@ -7,17 +7,16 @@ const R = 100
 
 export function createGlobe(hostEl, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#dceaf6')
+  scene.background = new THREE.Color('#ffffff')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 60, 320)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
-  renderer.setClearColor('#dceaf6', 1)
+  renderer.setClearColor('#ffffff', 1)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
   renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.05
+  renderer.toneMapping = THREE.NoToneMapping
   renderer.domElement.style.display = 'block'
   hostEl.appendChild(renderer.domElement)
 
@@ -33,45 +32,34 @@ export function createGlobe(hostEl, getOnSelect) {
   controls.enablePan = false
   controls.target.set(0, 0, 0)
 
-  scene.add(new THREE.AmbientLight(0xb7c8d8, 0.42))
-  const sun = new THREE.DirectionalLight(0xfff4e6, 2.15)
-  sun.position.set(-80, 40, 120)
-  scene.add(sun)
-  const fill = new THREE.DirectionalLight(0x8fb4d4, 0.28)
-  fill.position.set(90, -20, -70)
-  scene.add(fill)
+  scene.add(new THREE.AmbientLight(0xffffff, 1.4))
+  const key = new THREE.DirectionalLight(0xffffff, 0.38)
+  scene.add(key)
 
-  const globeMat = new THREE.MeshPhongMaterial({
+  const globeMat = new THREE.MeshLambertMaterial({
     map: paintLightEarth(),
     color: 0xffffff,
-    emissive: 0x000000,
-    shininess: 18,
-    specular: 0x1a3344,
   })
   const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 72), globeMat)
   scene.add(globe)
-  loadRealisticEarth(globeMat)
+
+  const cloudMat = new THREE.MeshLambertMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  })
+  const clouds = new THREE.Mesh(new THREE.SphereGeometry(R * 1.012, 96, 72), cloudMat)
+  scene.add(clouds)
+  loadBlueMarble(globeMat, cloudMat)
 
   scene.add(
     new THREE.Mesh(
-      new THREE.SphereGeometry(R * 1.018, 64, 48),
-      new THREE.MeshPhongMaterial({
-        color: 0x6ea8d8,
-        transparent: true,
-        opacity: 0.11,
-        shininess: 8,
-        specular: 0x112233,
-        depthWrite: false,
-      }),
-    ),
-  )
-  scene.add(
-    new THREE.Mesh(
-      new THREE.SphereGeometry(R * 1.06, 48, 32),
+      new THREE.SphereGeometry(R * 1.04, 64, 48),
       new THREE.MeshBasicMaterial({
-        color: 0x9ec4e6,
+        color: 0x8ec4e8,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.18,
         side: THREE.BackSide,
         depthWrite: false,
       }),
@@ -90,6 +78,8 @@ export function createGlobe(hostEl, getOnSelect) {
     raf = requestAnimationFrame(tick)
     if (paused) return
     controls.update()
+    key.position.copy(camera.position)
+    clouds.rotation.y += 0.00008
     _camDir.copy(camera.position).normalize()
     overlay.traverse((obj) => {
       if (!obj.element) return
@@ -271,28 +261,23 @@ function colorizeTexture(tex) {
   return tex
 }
 
-function loadRealisticEarth(globeMat) {
+function loadBlueMarble(globeMat, cloudMat) {
   const loader = new THREE.TextureLoader()
-  const img = (file) => `https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/${file}`
+  const planets = (file) => `https://cdn.jsdelivr.net/gh/mrdoob/three.js@r185/examples/textures/planets/${file}`
+  const globeImg = (file) => `https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/${file}`
   const applyDay = (tex) => {
     globeMat.map = colorizeTexture(tex)
     globeMat.needsUpdate = true
   }
-  loader.load(img('earth-blue-marble.jpg'), applyDay, undefined, () => {
-    loader.load(img('earth-day.jpg'), applyDay)
+  loader.load(planets('earth_atmos_2048.jpg'), applyDay, undefined, () => {
+    loader.load(globeImg('earth-blue-marble.jpg'), applyDay, undefined, () => {
+      loader.load(globeImg('earth-day.jpg'), applyDay)
+    })
   })
-  loader.load(img('earth-topology.png'), (bump) => {
-    bump.anisotropy = 8
-    globeMat.bumpMap = bump
-    globeMat.bumpScale = 1.8
-    globeMat.needsUpdate = true
-  })
-  loader.load(img('earth-water.png'), (spec) => {
-    spec.anisotropy = 8
-    globeMat.specularMap = spec
-    globeMat.specular = new THREE.Color(0x88c4e8)
-    globeMat.shininess = 28
-    globeMat.needsUpdate = true
+  loader.load(planets('earth_clouds_1024.png'), (tex) => {
+    cloudMat.map = colorizeTexture(tex)
+    cloudMat.opacity = 0.82
+    cloudMat.needsUpdate = true
   })
 }
 
