@@ -417,7 +417,12 @@ function renderMaps(d) {
   const highlightAssetId = state.scene.warehouse ? DEMO.assetId : null
 
   globe?.setPaused(state.mapMode !== 'globe')
-  globe?.setData({ events: d.filtered, assets: GLOBE_ASSETS, showRadiusFor: d.showRadiusFor, pulseEventId, highlightAssetId })
+  try {
+    globe?.setData({ events: d.filtered, assets: GLOBE_ASSETS, showRadiusFor: d.showRadiusFor, pulseEventId, highlightAssetId })
+  } catch (err) {
+    console.warn('Globe data failed', err)
+    showGlobeFallback()
+  }
   if (state.mapMode === 'globe') {
     globe?.resize()
     const flyKey = d.selected ? `${d.selected.type}:${d.selected.id}` : pulseEventId ? `pulse:${pulseEventId}` : ''
@@ -426,13 +431,13 @@ function renderMaps(d) {
       lastGlobeFlyKey = flyKey
       if (pulseEventId && !d.selected) {
         const ev = d.filtered.find((e) => e.id === pulseEventId)
-        if (ev?.coords) globe.flyTo(ev.coords[1], ev.coords[0], true)
+        if (ev?.coords) globe?.flyTo(ev.coords[1], ev.coords[0], true)
       } else if (d.selected) {
         const target =
           d.selected.type === 'event'
             ? d.filtered.find((e) => e.id === d.selected.id)
             : GLOBE_ASSETS.find((a) => a.id === d.selected.id)
-        if (target?.coords) globe.flyTo(target.coords[1], target.coords[0], true)
+        if (target?.coords) globe?.flyTo(target.coords[1], target.coords[0], true)
       }
     }
     const pov = globe?.pointOfView()
@@ -522,8 +527,12 @@ function runDesk() {
 
 function showGlobeFallback() {
   const el = $('#globe-stage')
-  if (!el || el.querySelector('canvas')) return
-  el.innerHTML = `<div class="globe-fallback"><strong>Affected area map</strong><p>Use the list on the right to pick an event and send an alert to people nearby.</p></div>`
+  if (!el || el.querySelector('.globe-fallback')) return
+  el.querySelectorAll('canvas, .globe-labels').forEach((node) => node.remove())
+  el.insertAdjacentHTML(
+    'beforeend',
+    `<div class="globe-fallback"><strong>Affected area</strong><p>The globe could not start in this browser. Pick an event on the right — you can still notify people nearby. Use Map for satellite imagery.</p></div>`,
+  )
 }
 
 function onMapSelect(sel) {
@@ -539,13 +548,20 @@ export function initApp() {
   const boot = $('#boot')
   if (boot) boot.hidden = true
   state.boot = false
-  render()
+  try {
+    render()
+  } catch (err) {
+    console.warn('Initial render failed', err)
+  }
 
   import('./globe.js')
     .then(({ createGlobe }) => {
       try {
-        globe = createGlobe($('#globe-stage'), onMapSelect)
+        const host = $('#globe-stage')
+        if (!host) return
+        globe = createGlobe(host, onMapSelect)
         globe?.resize()
+        render()
       } catch (err) {
         console.warn('Globe unavailable', err)
         showGlobeFallback()
@@ -556,9 +572,19 @@ export function initApp() {
       showGlobeFallback()
     })
 
+  setTimeout(() => {
+    const host = $('#globe-stage')
+    if (host && !host.querySelector('canvas') && !host.querySelector('.globe-fallback')) showGlobeFallback()
+  }, 2500)
+
   if ($('#globe-stage')) new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
   setInterval(() => {
-    if (state.mapMode === 'globe') renderMaps(derive())
+    if (state.mapMode !== 'globe') return
+    try {
+      renderMaps(derive())
+    } catch (err) {
+      console.warn('Globe tick failed', err)
+    }
   }, 240)
 
   import('./map.js')
@@ -676,13 +702,13 @@ export function initApp() {
     const typing = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
     if (e.key === '/' && !typing) {
       e.preventDefault()
-      $('#search').focus()
+      $('#search')?.focus()
     }
     if (e.key === 'Escape') {
       cueTimers.forEach(clearTimeout)
       state.scene = { pulse: false, flood: false, warehouse: false, distance: false }
       state.selectedId = null
-      $('#search').blur()
+      $('#search')?.blur()
       render()
     }
     if ((e.key === 'r' || e.key === 'R') && !typing && !e.metaKey && !e.ctrlKey) {
@@ -691,5 +717,9 @@ export function initApp() {
     }
   })
 
-  render()
+  try {
+    render()
+  } catch (err) {
+    console.warn('Render failed', err)
+  }
 }
