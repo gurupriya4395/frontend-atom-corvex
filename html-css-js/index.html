@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atom Corvex · Operations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/nav.css" />
+    <link rel="stylesheet" href="css/markers.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/dist/maplibre-gl.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/",
+          "maplibre-gl": "https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/+esm"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app">
+      <div id="boot" class="boot">
+        <div class="boot-inner">
+          <span class="boot-tag">Demo</span>
+          <h1>Atom Corvex</h1>
+          <p>Starting operations view</p>
+          <ol class="boot-steps">
+            <li>Ingest</li>
+            <li>Correlate</li>
+            <li>Score</li>
+            <li>Alert</li>
+          </ol>
+          <div class="scan"><i></i></div>
+        </div>
+      </div>
+
+      <header class="topbar ops-topbar">
+        <div class="brand">
+          <span class="brand-mark">Atom Corvex</span>
+          <span id="view-badge" class="ops-mode-badge">Globe view</span>
+        </div>
+        <nav class="menu-nav" aria-label="Workspace">
+          <button type="button" data-workspace="command">Command Center</button>
+          <button type="button" data-workspace="monitor" class="active">Monitor</button>
+          <button type="button" data-workspace="assets">Assets</button>
+          <button type="button" data-workspace="response">Response</button>
+          <button type="button" data-workspace="insights">Insights</button>
+        </nav>
+        <div class="top-right">
+          <span class="ops-live-pill"><span class="live-dot"></span> Live</span>
+          <button id="btn-demo" class="ghost run-desk" type="button">Demo</button>
+          <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
+          <span id="ops-clock" class="stamp ops-clock"></span>
+        </div>
+      </header>
+
+      <div id="topbar-coords" class="topbar-coords-panel" hidden></div>
+
+      <div class="ops-chrome-stack">
+        <div class="menu-subnav" id="monitor-bar">
+          <span class="menu-subnav-label">Monitor</span>
+          <div class="menu-subnav-group monitor-windows">
+            <button type="button" data-window="live" class="active">Live</button>
+            <button type="button" data-window="upcoming">Upcoming</button>
+            <button type="button" data-window="history">History</button>
+            <button type="button" data-window="saved">Saved Views</button>
+          </div>
+          <div class="menu-subnav-group monitor-present">
+            <button type="button" data-present="map" class="active">Map</button>
+            <button type="button" data-present="list">List</button>
+            <button type="button" data-present="split">Split</button>
+          </div>
+        </div>
+        <div class="alerts-strip" role="region" aria-label="Alert summary">
+          <div class="alerts-strip-head">
+            <span class="alerts-strip-title">Summary</span>
+            <span id="alert-strip-window" class="alerts-strip-window">Live now</span>
+          </div>
+          <div id="alert-cells" class="alerts-strip-body"></div>
+        </div>
+        <div class="ops-meta-row">
+          <div id="coord-strip" class="coord-strip">
+            <span class="coord-strip-empty">Select an event or site to view coordinates</span>
+          </div>
+          <div id="risk-row" class="risk-row desk"></div>
+        </div>
+      </div>
+
+      <div id="workspace-note" class="workspace-placeholder" hidden></div>
+
+      <div class="ops">
+        <div id="map-wrap" class="map-wrap is-satellite">
+          <div class="hud-frame" aria-hidden="true">
+            <i class="c tl"></i>
+            <i class="c tr"></i>
+            <i class="c bl"></i>
+            <i class="c br"></i>
+          </div>
+
+          <div id="globe-stage" class="globe-stage on"></div>
+
+          <div id="map-stage" class="map-stage off">
+            <div class="map-el terrain-map">
+              <div id="terrain-canvas" class="terrain-canvas"></div>
+              <div id="desk-hud" class="desk-hud"></div>
+              <div class="terrain-chrome">
+                <div id="map-coord-readout" class="map-coord-readout" hidden aria-live="polite"></div>
+                <div class="terrain-tools">
+                  <button id="btn-zoom-map" type="button" class="terrain-btn">Zoom out</button>
+                </div>
+                <div class="terrain-key" aria-label="Severity key">
+                  <span class="k high">High</span>
+                  <span class="k medium">Medium</span>
+                  <span class="k low">Low</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="view-toggle">
+            <button id="btn-globe" type="button" class="active">Globe</button>
+            <button id="btn-map" type="button">Map</button>
+          </div>
+
+          <div id="globe-tools" class="globe-tools">
+            <button id="btn-zoom-globe" type="button" class="terrain-btn">Zoom out</button>
+          </div>
+
+          <div id="globe-telemetry" class="telemetry">
+            <span>Camera</span>
+            <b>—</b>
+            <span>Alt — · select a pin for details</span>
+            <i></i>
+          </div>
+
+          <div class="hud">
+            <div class="legend">
+              <h4>Globe view</h4>
+              <div class="lg">India events and global offices</div>
+              <div class="lg">Select a pin for coordinates</div>
+              <div class="lg">Drag to pan · scroll to zoom</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="rail ops-rail">
+          <header class="ops-rail-head">
+            <div>
+              <span class="ops-rail-tag">Filters</span>
+              <h3>Refine list</h3>
+            </div>
+            <span id="utc-clock" class="ops-rail-time"></span>
+          </header>
+
+          <div class="ops-summary">
+            <div class="ops-summary-item">
+              <em id="filtered-count">0</em>
+              <span>Showing</span>
+            </div>
+            <div class="ops-summary-item">
+              <em id="count-live">0</em>
+              <span>Live</span>
+            </div>
+            <div class="ops-summary-item warn">
+              <em id="count-forecast">0</em>
+              <span>Forecast</span>
+            </div>
+          </div>
+
+          <div class="mix ops-mix">
+            <span class="stamp">Event mix</span>
+            <div id="mix-bar" class="mix-bar"></div>
+            <div id="mix-keys" class="mix-keys"></div>
+          </div>
+
+          <div class="src ops-feed">
+            <span class="live-dot"></span>
+            Feed
+            <b id="latency">86 ms</b>
+          </div>
+
+          <div class="filters ops-filters">
+            <div>
+              <label>Category</label>
+              <div class="chip-rows">
+                <button type="button" class="fchip on" data-cat="geopolitical">Civil</button>
+                <button type="button" class="fchip on" data-cat="environmental">Weather</button>
+                <button type="button" class="fchip on" data-cat="security">Security</button>
+              </div>
+            </div>
+            <div>
+              <label>Severity</label>
+              <div class="chip-rows">
+                <button type="button" class="fchip high on" data-sev="high">High</button>
+                <button type="button" class="fchip medium on" data-sev="medium">Medium</button>
+                <button type="button" class="fchip low on" data-sev="low">Low</button>
+              </div>
+            </div>
+          </div>
+
+          <label class="ops-wire-label">Recent activity</label>
+          <ul id="wire-log" class="wire ops-wire"></ul>
+        </aside>
+
+        <aside class="feed ops-feed">
+          <div class="feed-head">
+            <div class="feed-title">
+              <h2>Proximity</h2>
+              <em id="feed-count">0</em>
+            </div>
+            <div class="feed-meta">
+              <span class="live-dot"></span>
+              <span id="feed-mode">Live feed</span>
+              <span id="feed-clock"></span>
+            </div>
+          </div>
+          <div id="event-cards" class="cards"></div>
+        </aside>
+
+        <div id="wire-toast" class="wire-toast" hidden></div>
+
+        <div class="time-strip">
+          <button id="btn-replay" type="button" class="ghost">Replay</button>
+          <div id="time-track" class="track">
+            <i id="time-head" class="head live"></i>
+            <span class="t0">now</span>
+            <span class="t2">+2d</span>
+          </div>
+          <div class="time-dock">
+            <button type="button" data-mode="live" class="active">live</button>
+            <button type="button" data-mode="forecast">forecast</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
