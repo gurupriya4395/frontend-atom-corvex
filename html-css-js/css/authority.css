@@ -15,6 +15,7 @@
   --auth-line: #d9e1ea;
   --auth-accent: #2f6fed;
   --auth-danger: #d6453d;
+  --auth-sky: #dceaf6;
   background: #e8edf3;
 }
 
@@ -53,13 +54,14 @@
 }
 
 .layout-authority .globe-stage {
-  background: #ffffff;
+  background:
+    radial-gradient(circle at 50% 42%, #eef5fb 0%, var(--auth-sky) 48%, #c9dcea 100%);
 }
 
 .layout-authority .map-wrap,
 .layout-authority .map-wrap.is-satellite,
 .layout-authority .map-wrap.is-imagery {
-  background: #ffffff;
+  background: var(--auth-sky);
 }
 
 .layout-authority .time-windows {
@@ -425,7 +427,8 @@
   padding: 24px;
   text-align: center;
   color: #1b2430;
-  background: #ffffff;
+  background:
+    radial-gradient(circle at 50% 42%, #eef5fb 0%, #dceaf6 48%, #c9dcea 100%);
 }
 
 .globe-fallback strong {

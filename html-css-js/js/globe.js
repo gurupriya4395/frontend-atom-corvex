@@ -7,13 +7,13 @@ const R = 100
 
 export function createGlobe(hostEl, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#ffffff')
+  scene.background = new THREE.Color('#dceaf6')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 60, 320)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
-  renderer.setClearColor('#ffffff', 1)
+  renderer.setClearColor('#dceaf6', 1)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
   renderer.domElement.style.display = 'block'
   hostEl.appendChild(renderer.domElement)
@@ -76,7 +76,7 @@ export function createGlobe(hostEl, getOnSelect) {
   scene.add(
     new THREE.Mesh(
       new THREE.SphereGeometry(R * 1.045, 48, 32),
-      new THREE.MeshBasicMaterial({ color: 0xb9c9d8, transparent: true, opacity: 0.22, side: THREE.BackSide }),
+      new THREE.MeshBasicMaterial({ color: 0xc5d8ea, transparent: true, opacity: 0.28, side: THREE.BackSide }),
     ),
   )
 
