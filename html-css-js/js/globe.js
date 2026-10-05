@@ -7,12 +7,13 @@ const R = 100
 
 export function createGlobe(hostEl, getOnSelect) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#070b10')
+  scene.background = new THREE.Color('#ffffff')
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000)
   camera.position.set(0, 60, 320)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' })
+  renderer.setClearColor('#ffffff', 1)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
   renderer.domElement.style.display = 'block'
   hostEl.appendChild(renderer.domElement)
@@ -42,11 +43,11 @@ export function createGlobe(hostEl, getOnSelect) {
 
   const globeMat = new THREE.MeshPhongMaterial({
     map: paintLightEarth(),
-    color: 0xe8eef4,
-    emissive: 0x0a1018,
-    emissiveIntensity: 0.12,
-    shininess: 22,
-    specular: 0x556677,
+    color: 0xffffff,
+    emissive: 0xdde6ef,
+    emissiveIntensity: 0.08,
+    shininess: 18,
+    specular: 0x9aabb8,
   })
   const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 80, 64), globeMat)
   scene.add(globe)
@@ -75,7 +76,7 @@ export function createGlobe(hostEl, getOnSelect) {
   scene.add(
     new THREE.Mesh(
       new THREE.SphereGeometry(R * 1.045, 48, 32),
-      new THREE.MeshBasicMaterial({ color: 0x3d6a8a, transparent: true, opacity: 0.1, side: THREE.BackSide }),
+      new THREE.MeshBasicMaterial({ color: 0xb9c9d8, transparent: true, opacity: 0.22, side: THREE.BackSide }),
     ),
   )
 

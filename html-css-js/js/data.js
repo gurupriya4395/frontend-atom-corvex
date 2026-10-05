@@ -199,7 +199,16 @@ export const PEOPLE = [
 
 const hoursAgo = (h) => Date.now() - h * 3600 * 1000
 const daysAhead = (d) => Date.now() + d * 86400 * 1000
+const daysAgo = (d) => Date.now() - d * 86400 * 1000
 
+/**
+ * Live / Upcoming / History is decided only by time fields:
+ *   Upcoming — `forecast: true` and/or `eventAt: daysAhead(n)`
+ *   Live     — `eventAt` in the last 24 hours, no forecast flag
+ *   History  — `eventAt: daysAgo(n)` (older than 24 hours), no forecast flag
+ * The India desk only lists events with `flag: 'IN'`.
+ * You can also add events from the desk with Add event.
+ */
 export const EVENTS = [
   {
     id: 'ev-flood-mum',
@@ -464,6 +473,98 @@ export const EVENTS = [
     eventAt: daysAhead(1),
     forecast: true,
     why: 'Forecast pedestrian slowdown at Deutsche Bank Center next tide cycle.',
+  },
+  {
+    id: 'ev-fut-imd-mum',
+    kind: 'flood',
+    category: 'environmental',
+    domain: 'Environmental',
+    title: 'IMD red-alert window for Mumbai high tide',
+    summary:
+      'A spring-tide surge is forecast tomorrow evening. BMC may close low underpasses near the warehouse district. Pre-position pumps and hold last-mile trucks until the window closes.',
+    place: 'Mumbai, Maharashtra, India',
+    flag: 'IN',
+    coords: [72.869, 19.089],
+    severity: 'high',
+    source: 'IMD',
+    sourceUrl: 'https://mausam.imd.gov.in/',
+    publishedAt: hoursAgo(2),
+    eventAt: daysAhead(1.4),
+    forecast: true,
+    why: 'Forecast high-tide window at the Mumbai Warehouse gate.',
+  },
+  {
+    id: 'ev-fut-che-port',
+    kind: 'storm',
+    category: 'environmental',
+    domain: 'Natural Disasters',
+    title: 'Port advisory: swell and wind for Chennai outer harbour',
+    summary:
+      'Harbour master expects berthing delays in 36 hours. Night contractor shifts at the plant should be stood down if the advisory holds.',
+    place: 'Chennai, Tamil Nadu, India',
+    flag: 'IN',
+    coords: [80.29, 13.1],
+    severity: 'medium',
+    source: 'IMD',
+    sourceUrl: 'https://mausam.imd.gov.in/',
+    publishedAt: hoursAgo(4),
+    eventAt: daysAhead(1.6),
+    forecast: true,
+    why: 'Forecast berthing delay — inspect Chennai Plant drainage.',
+  },
+  {
+    id: 'ev-hist-mum-drain',
+    kind: 'flood',
+    category: 'environmental',
+    domain: 'Environmental',
+    title: 'Andheri East flooding cleared after overnight pumping',
+    summary:
+      'BMC reopened the warehouse access road. After-action: two last-mile trucks were held for six hours. Logged as history for the desk.',
+    place: 'Mumbai, Maharashtra, India',
+    flag: 'IN',
+    coords: [72.869, 19.089],
+    severity: 'medium',
+    source: 'The Times of India',
+    sourceUrl: 'https://timesofindia.indiatimes.com/india',
+    publishedAt: daysAgo(5),
+    eventAt: daysAgo(5.2),
+    why: 'Closed incident — warehouse gate reopened after pumping.',
+  },
+  {
+    id: 'ev-hist-nsk-rally',
+    kind: 'protest',
+    category: 'geopolitical',
+    domain: 'Civil Disturbance',
+    title: 'Nashik ring-road blockade lifted after overnight talks',
+    summary:
+      'The farmers’ sit-in ended. Traffic restored. No ATOM site was inside the radius. Kept on the history tape.',
+    place: 'Nashik, Maharashtra, India',
+    flag: 'IN',
+    coords: [73.7898, 19.9975],
+    severity: 'low',
+    source: 'Reuters',
+    sourceUrl: 'https://www.reuters.com/world/',
+    publishedAt: daysAgo(8),
+    eventAt: daysAgo(8.3),
+    why: 'Closed incident — no spillover to Mumbai or Pune assets.',
+  },
+  {
+    id: 'ev-hist-pune-strike',
+    kind: 'protest',
+    category: 'geopolitical',
+    domain: 'Political',
+    title: 'Pune transport strike ended after 36-hour talks',
+    summary:
+      'STU services resumed. Office commute returned to normal. Recorded so the desk can compare the next notified march.',
+    place: 'Pune, Maharashtra, India',
+    flag: 'IN',
+    coords: [73.841, 18.531],
+    severity: 'low',
+    source: 'Hindustan Times',
+    sourceUrl: 'https://www.hindustantimes.com/',
+    publishedAt: daysAgo(11),
+    eventAt: daysAgo(11.5),
+    why: 'Closed incident — Pune Office commute restored.',
   },
 ]
 

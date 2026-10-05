@@ -52,11 +52,90 @@
   color: #fff;
 }
 
-.layout-authority .globe-tools {
-  top: 16px;
-  right: calc(var(--map-inset-right) + 16px);
-  left: auto;
-  transform: none;
+.layout-authority .globe-stage {
+  background: #ffffff;
+}
+
+.layout-authority .map-wrap,
+.layout-authority .map-wrap.is-satellite,
+.layout-authority .map-wrap.is-imagery {
+  background: #ffffff;
+}
+
+.layout-authority .time-windows {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 3px;
+  background: #f4f7fb;
+  border: 1px solid var(--auth-line);
+  border-radius: 10px;
+}
+
+.layout-authority .time-windows button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--auth-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.layout-authority .time-windows button.active {
+  background: #fff;
+  color: var(--auth-ink);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.layout-authority .add-event-toggle {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px dashed var(--auth-line);
+  background: #fff;
+  color: var(--auth-accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+
+.layout-authority .add-event-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.layout-authority .add-event-form[hidden] {
+  display: none !important;
+}
+
+.layout-authority .add-event-form input,
+.layout-authority .add-event-form select {
+  width: 100%;
+  border: 1px solid var(--auth-line);
+  background: #f4f7fb;
+  color: var(--auth-ink);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.layout-authority .add-event-form button[type='submit'] {
+  border: 0;
+  background: var(--auth-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.layout-authority .feed.authority-desk .chip.history {
+  color: #57534e;
+  border-color: #e7e5e4;
+  background: #fafaf9;
 }
 
 .layout-authority .feed.authority-desk {
@@ -345,9 +424,8 @@
   gap: 8px;
   padding: 24px;
   text-align: center;
-  color: #dce7f3;
-  background:
-    radial-gradient(circle at 50% 42%, #1a2838 0%, #0c1218 45%, #070b10 100%);
+  color: #1b2430;
+  background: #ffffff;
 }
 
 .globe-fallback strong {
@@ -357,6 +435,6 @@
 .globe-fallback p {
   margin: 0;
   font-size: 13px;
-  color: #9aa8b8;
+  color: #6b7785;
   max-width: 280px;
 }

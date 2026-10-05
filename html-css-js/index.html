@@ -219,7 +219,40 @@
             <span class="auth-kicker">Authority</span>
             <h2>Notify nearby</h2>
             <p>Send an alert only to people inside the affected radius — not the whole city.</p>
+            <div id="time-windows" class="time-windows">
+              <button type="button" data-mode="live" class="active">Live</button>
+              <button type="button" data-mode="forecast">Upcoming</button>
+              <button type="button" data-mode="history">History</button>
+            </div>
             <input id="search" class="search ops-search" placeholder="Search event or city…" />
+            <button id="btn-add-event" type="button" class="add-event-toggle">Add event</button>
+            <form id="add-event-form" class="add-event-form" hidden>
+              <input name="title" required placeholder="What is happening?" />
+              <select name="place">
+                <option value="Mumbai, Maharashtra, India">Mumbai</option>
+                <option value="Pune, Maharashtra, India">Pune</option>
+                <option value="Nashik, Maharashtra, India">Nashik</option>
+                <option value="Chennai, Tamil Nadu, India">Chennai</option>
+                <option value="Gurugram, Haryana, India">Gurugram</option>
+                <option value="Kochi, Kerala, India">Kochi</option>
+              </select>
+              <select name="when">
+                <option value="live">Live (now)</option>
+                <option value="forecast">Upcoming (tomorrow)</option>
+                <option value="history">History (5 days ago)</option>
+              </select>
+              <select name="category">
+                <option value="environmental">Weather</option>
+                <option value="geopolitical">Civil</option>
+                <option value="security">Security</option>
+              </select>
+              <select name="severity">
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <button type="submit">Save to this window</button>
+            </form>
           </div>
           <div class="auth-events">
             <div class="feed-title">
