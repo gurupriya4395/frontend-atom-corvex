@@ -137,6 +137,21 @@
   background: #ffffff;
 }
 
+/* Keep the WebGL canvas sized while Map is up, or the globe comes back blank. */
+.layout-authority .globe-stage.off {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout-authority .globe-stage.on {
+  display: block;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2;
+}
+
 .layout-authority .map-wrap,
 .layout-authority .map-wrap.is-satellite,
 .layout-authority .map-wrap.is-imagery {

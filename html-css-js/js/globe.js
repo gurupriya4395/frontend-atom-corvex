@@ -92,12 +92,17 @@ export function createGlobe(hostEl, getOnSelect) {
   }
 
   const resize = () => {
-    const w = hostEl.clientWidth || 1
-    const h = hostEl.clientHeight || 1
+    const w = hostEl.clientWidth
+    const h = hostEl.clientHeight
+    if (w < 40 || h < 40) return
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
     labels.setSize(w, h)
+    if (!paused) {
+      renderer.render(scene, camera)
+      labels.render(scene, camera)
+    }
   }
   resize()
   tick()
@@ -178,7 +183,8 @@ export function createGlobe(hostEl, getOnSelect) {
       animateCamera(new THREE.Vector3(0, 90, 320), 900, { lockControls: false })
     },
     setPaused: (on) => {
-      paused = on
+      paused = Boolean(on)
+      if (!paused) resize()
     },
     dispose: () => {
       cancelFly()

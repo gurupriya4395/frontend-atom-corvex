@@ -441,6 +441,7 @@ function renderMaps(d) {
   if (btnGlobe) btnGlobe.classList.toggle('active', state.mapMode === 'globe')
   if (btnMap) btnMap.classList.toggle('active', state.mapMode === 'map')
   if ($('#globe-tools')) $('#globe-tools').hidden = state.mapMode !== 'globe'
+  if ($('#btn-zoom-map')) $('#btn-zoom-map').hidden = state.mapMode !== 'map'
 
   const pulseEventId = state.scene.pulse ? DEMO.eventId : null
   const highlightAssetId = state.scene.warehouse ? DEMO.assetId : null
@@ -454,6 +455,7 @@ function renderMaps(d) {
   }
   if (state.mapMode === 'globe') {
     globe?.resize()
+    requestAnimationFrame(() => globe?.resize())
     const flyKey = d.selected ? `${d.selected.type}:${d.selected.id}` : pulseEventId ? `pulse:${pulseEventId}` : ''
     if (forceGlobeFly || (flyKey && flyKey !== lastGlobeFlyKey)) {
       forceGlobeFly = false
@@ -710,14 +712,15 @@ export function initApp() {
     }
     addForm.addEventListener('submit', (e) => {
       e.preventDefault()
-      const title = addForm.title.value.trim()
+      const fd = new FormData(addForm)
+      const title = String(fd.get('title') || '').trim()
       if (!title) return
       addCustomEvent({
         title,
-        place: addForm.place.value,
-        window: addForm.when.value,
-        severity: addForm.severity.value,
-        category: addForm.category.value,
+        place: String(fd.get('place') || ''),
+        window: String(fd.get('when') || 'live'),
+        severity: String(fd.get('severity') || 'medium'),
+        category: String(fd.get('category') || 'environmental'),
       })
       addForm.reset()
       addForm.hidden = true
