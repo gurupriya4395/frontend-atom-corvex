@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/nav.css" />
     <link rel="stylesheet" href="css/markers.css" />
+    <link rel="stylesheet" href="css/authority.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.3.0/dist/maplibre-gl.css" />
     <script type="importmap">
       {
@@ -25,12 +26,12 @@
     </script>
   </head>
   <body>
-    <div class="app">
+    <div class="app layout-authority">
       <div id="boot" class="boot">
         <div class="boot-inner">
           <span class="boot-tag">Demo</span>
           <h1>Atom Corvex</h1>
-          <p>Starting operations view</p>
+          <p>Authority desk · notify people near the affected area</p>
           <ol class="boot-steps">
             <li>Ingest</li>
             <li>Correlate</li>
@@ -56,8 +57,7 @@
         <div class="top-right">
           <span class="ops-live-pill"><span class="live-dot"></span> Live</span>
           <button id="btn-demo" class="ghost run-desk" type="button">Demo</button>
-          <input id="search" class="search ops-search" placeholder="Search city, HQ, flood…" />
-          <span id="ops-clock" class="stamp ops-clock"></span>
+          <span id="ops-clock" class="stamp ops-clock" hidden></span>
         </div>
       </header>
 
@@ -94,6 +94,11 @@
       </div>
 
       <div id="workspace-note" class="workspace-placeholder" hidden></div>
+
+      <div class="brand-float">
+        Atom Corvex
+        <small>Authority desk</small>
+      </div>
 
       <div class="ops">
         <div id="map-wrap" class="map-wrap is-satellite">
@@ -209,19 +214,21 @@
           <ul id="wire-log" class="wire ops-wire"></ul>
         </aside>
 
-        <aside class="feed ops-feed">
-          <div class="feed-head">
+        <aside class="feed ops-feed authority-desk">
+          <div class="auth-head">
+            <span class="auth-kicker">Authority</span>
+            <h2>Notify nearby</h2>
+            <p>Send an alert only to people inside the affected radius — not the whole city.</p>
+            <input id="search" class="search ops-search" placeholder="Search event or city…" />
+          </div>
+          <div class="auth-events">
             <div class="feed-title">
-              <h2>Proximity</h2>
+              <h3>Affected areas</h3>
               <em id="feed-count">0</em>
             </div>
-            <div class="feed-meta">
-              <span class="live-dot"></span>
-              <span id="feed-mode">Live feed</span>
-              <span id="feed-clock"></span>
-            </div>
+            <div id="event-cards" class="cards"></div>
           </div>
-          <div id="event-cards" class="cards"></div>
+          <div id="dispatch-panel" class="dispatch-panel"></div>
         </aside>
 
         <div id="wire-toast" class="wire-toast" hidden></div>

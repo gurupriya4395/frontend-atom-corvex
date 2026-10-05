@@ -6,6 +6,7 @@ import { VIEW_LABELS, TIME_WINDOW_LABELS, CATEGORY_LABELS, SEVERITY_LABELS, FOCU
 import { eventMarkerHtml } from './markers.js'
 import { createGlobe } from './globe.js'
 import { DeskMap } from './map.js'
+import { defaultAlertCopy, headcountOf, peopleNearEvent } from './dispatch.js'
 
 const ALERT_FILTERS = {
   total: 'total',
@@ -45,6 +46,10 @@ const state = {
   toast: null,
   latencyMs: 86,
   incomingIdx: 0,
+  notifyRadiusKm: 10,
+  selectedPeople: {},
+  draftMessage: '',
+  sentAlerts: [],
 }
 
 let globe = null
@@ -110,10 +115,33 @@ function derive() {
   return { pool, filtered, indiaPool, selectedEvent, selectedAsset, selected, showRadiusFor, focusPoint }
 }
 
+function nearbyFor(event) {
+  return peopleNearEvent(event, state.notifyRadiusKm)
+}
+
+function selectedRecipients(people) {
+  return people.filter((person) => state.selectedPeople[person.id] !== false)
+}
+
+function syncPeopleSelection(people) {
+  const next = {}
+  for (const person of people) {
+    next[person.id] = state.selectedPeople[person.id] !== false
+  }
+  state.selectedPeople = next
+}
+
 function pickEvent(id, opts = {}) {
+  const changed = state.selectedId !== id
   state.selectedId = id
   state.selectedAssetId = null
   if (opts.map) state.mapMode = 'map'
+  if (changed) {
+    const event = enrich(state.raw, ASSETS).find((e) => e.id === id)
+    const people = nearbyFor(event)
+    state.selectedPeople = Object.fromEntries(people.map((p) => [p.id, true]))
+    state.draftMessage = defaultAlertCopy(event, people)
+  }
   render()
 }
 
@@ -134,12 +162,35 @@ function clearSelection() {
 
 function renderChrome(d) {
   const coords = $('#topbar-coords')
-  if (d.focusPoint) {
-    coords.innerHTML = `<span class="topbar-coords-label">${d.focusPoint.label}</span><span class="topbar-coords-val"><em>Lat</em> ${fmtLat(d.focusPoint.lat)}</span><span class="topbar-coords-val"><em>Long</em> ${fmtLng(d.focusPoint.lng)}</span>`
-  } else {
-    coords.innerHTML = `<span class="topbar-coords-hint">Select an event or site to see coordinates</span>`
+  if (coords) {
+    if (d.focusPoint) {
+      coords.innerHTML = `<span class="topbar-coords-label">${d.focusPoint.label}</span><span class="topbar-coords-val"><em>Lat</em> ${fmtLat(d.focusPoint.lat)}</span><span class="topbar-coords-val"><em>Long</em> ${fmtLng(d.focusPoint.lng)}</span>`
+    } else {
+      coords.innerHTML = `<span class="topbar-coords-hint">Select an event or site to see coordinates</span>`
+    }
   }
-  $('#ops-clock').textContent = clock(Date.now())
+  if ($('#ops-clock')) $('#ops-clock').textContent = clock(Date.now())
+
+  document.querySelectorAll('.menu-nav button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.workspace === state.workspace)
+  })
+  document.querySelectorAll('.monitor-windows button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.window === state.monitorWindow)
+  })
+  document.querySelectorAll('.monitor-present button').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.present === state.presentation)
+  })
+  const note = $('#workspace-note')
+  if (note) {
+    const text = WORKSPACE_LABELS[state.workspace] || ''
+    note.textContent = text
+    note.hidden = !text
+  }
+  const monitorBar = $('#monitor-bar')
+  if (monitorBar) monitorBar.hidden = state.workspace !== 'monitor'
+  if ($('#view-badge')) $('#view-badge').textContent = VIEW_LABELS[state.mapMode] || VIEW_LABELS.globe
+
+  if (!$('#alert-cells')) return
 
   document.querySelectorAll('.menu-nav button').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.workspace === state.workspace)
@@ -206,6 +257,7 @@ function renderChrome(d) {
 }
 
 function renderRail(d) {
+  if (!$('#utc-clock')) return
   const utc = new Date().toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' })
   $('#utc-clock').textContent = `${utc} UTC`
   $('#filtered-count').textContent = d.filtered.length
@@ -242,8 +294,8 @@ function renderFeed(d) {
     ? d.pool.filter((e) => e.flag === 'IN' && isForecastEvent(e) && inNextTwoDays(e) && state.cats[e.category] && state.sevs[e.severity]).length
     : d.pool.filter((e) => e.flag === 'IN' && !isForecastEvent(e) && state.cats[e.category] && state.sevs[e.severity]).length
   $('#feed-count').textContent = n
-  $('#feed-mode').textContent = state.timeMode === 'forecast' ? 'Forecast · 2 days' : 'Live feed'
-  $('#feed-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false })
+  if ($('#feed-mode')) $('#feed-mode').textContent = state.timeMode === 'forecast' ? 'Forecast · 2 days' : 'Live feed'
+  if ($('#feed-clock')) $('#feed-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false })
 
   if (!d.filtered.length) {
     $('#event-cards').innerHTML = `<div class="empty">${state.q ? `No match for “${state.q}”.` : state.timeMode === 'forecast' ? 'No forecast events in the next 2 days.' : 'No live events on the desk right now.'}</div>`
@@ -265,7 +317,108 @@ function renderFeed(d) {
   })
 }
 
-function renderMaps(d) {
+function renderDispatch(d) {
+  const panel = $('#dispatch-panel')
+  if (!panel) return
+  const event = d.selectedEvent
+  if (!event) {
+    panel.innerHTML = `<p class="dispatch-empty">Select an affected area on the left list. You will only message people near that pin.</p>`
+    return
+  }
+  const people = nearbyFor(event)
+  syncPeopleSelection(people)
+  const chosen = selectedRecipients(people)
+  const n = headcountOf(chosen)
+  const radii = [5, 10, 25]
+  if (!people.length) {
+    panel.innerHTML = `<p class="dispatch-place"><strong>${event.place}</strong></p>
+      <div class="radius-row">${radii.map((km) => `<button type="button" data-radius="${km}" class="${state.notifyRadiusKm === km ? 'on' : ''}">${km} km</button>`).join('')}</div>
+      <div class="nobody">No registered people sit inside ${state.notifyRadiusKm} km of this event. Do not send a city-wide alert. Widen the radius or pick another area.</div>`
+    bindDispatch(panel)
+    return
+  }
+  panel.innerHTML = `<p class="dispatch-place">Affected area · <strong>${event.place}</strong></p>
+    <div class="radius-row">${radii.map((km) => `<button type="button" data-radius="${km}" class="${state.notifyRadiusKm === km ? 'on' : ''}">${km} km</button>`).join('')}</div>
+    <div class="people-list">${people
+      .map((person) => {
+        const on = state.selectedPeople[person.id] !== false
+        const count = person.headcount || 1
+        return `<button type="button" class="person ${on ? '' : 'off'}" data-person="${person.id}">
+          <input type="checkbox" ${on ? 'checked' : ''} tabindex="-1" />
+          <span><b>${person.name}</b><span>${person.role} · ${person.site.name}</span></span>
+          <em>${person.km.toFixed(1)} km${count > 1 ? ` · ${count}` : ''}</em>
+        </button>`
+      })
+      .join('')}</div>
+    <textarea id="dispatch-copy" class="dispatch-copy">${state.draftMessage || defaultAlertCopy(event, chosen)}</textarea>
+    <button type="button" class="send-alert" ${n ? '' : 'disabled'} data-send="1">Send alert to ${n} ${n === 1 ? 'person' : 'people'}</button>
+    <p class="send-note">Only the checked group receives this. Nobody else on the map is notified.</p>
+    ${
+      state.sentAlerts.length
+        ? `<div class="sent-log"><h4>Sent</h4><ul>${state.sentAlerts
+            .slice(0, 4)
+            .map((row) => `<li>${row.n} people · ${row.place} · ${clock(row.at)}</li>`)
+            .join('')}</ul></div>`
+        : ''
+    }`
+  bindDispatch(panel)
+}
+
+function bindDispatch(panel) {
+  panel.querySelectorAll('[data-radius]').forEach((btn) => {
+    btn.onclick = () => {
+      state.notifyRadiusKm = Number(btn.dataset.radius)
+      const event = enrich(state.raw, ASSETS).find((e) => e.id === state.selectedId)
+      const people = nearbyFor(event)
+      state.selectedPeople = Object.fromEntries(people.map((p) => [p.id, true]))
+      state.draftMessage = defaultAlertCopy(event, people)
+      render()
+    }
+  })
+  panel.querySelectorAll('[data-person]').forEach((btn) => {
+    btn.onclick = () => {
+      const id = btn.dataset.person
+      state.selectedPeople = { ...state.selectedPeople, [id]: state.selectedPeople[id] === false }
+      const copy = $('#dispatch-copy')
+      if (copy) state.draftMessage = copy.value
+      render()
+    }
+  })
+  const copy = $('#dispatch-copy')
+  if (copy) {
+    copy.oninput = () => {
+      state.draftMessage = copy.value
+    }
+  }
+  const send = panel.querySelector('[data-send]')
+  if (send) {
+    send.onclick = () => {
+      const event = enrich(state.raw, ASSETS).find((e) => e.id === state.selectedId)
+      const people = selectedRecipients(nearbyFor(event))
+      const n = headcountOf(people)
+      if (!n) return
+      const message = ($('#dispatch-copy')?.value || '').trim()
+      state.sentAlerts = [
+        {
+          at: Date.now(),
+          eventId: event.id,
+          place: event.place.split(',')[0],
+          n,
+          names: people.map((p) => p.name),
+          message,
+        },
+        ...state.sentAlerts,
+      ]
+      state.log = [`Alert sent · ${n} nearby · ${event.place.split(',')[0]}`, ...state.log].slice(0, 6)
+      state.toast = { title: `Alert sent to ${n} nearby`, place: event.place }
+      render()
+      setTimeout(() => {
+        state.toast = null
+        render()
+      }, 4200)
+    }
+  }
+}
   const wrap = $('#map-wrap')
   wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery' : 'is-satellite'}`
   $('#globe-stage').className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
@@ -345,6 +498,7 @@ function render() {
   renderChrome(d2)
   renderRail(d2)
   renderFeed(d2)
+  renderDispatch(d2)
   renderMaps(d2)
 }
 
@@ -384,14 +538,18 @@ export function initApp() {
     $('#boot').hidden = true
   }, 1800)
 
-  globe = createGlobe($('#globe-stage'), (sel) => {
-    if (!sel) {
-      clearSelection()
-      return
-    }
-    if (sel.type === 'event') pickEvent(sel.id, { map: true })
-    if (sel.type === 'asset') pickAsset(sel.id, { map: true })
-  })
+  try {
+    globe = createGlobe($('#globe-stage'), (sel) => {
+      if (!sel) {
+        clearSelection()
+        return
+      }
+      if (sel.type === 'event') pickEvent(sel.id)
+      if (sel.type === 'asset') pickAsset(sel.id)
+    })
+  } catch (err) {
+    console.warn('Globe unavailable', err)
+  }
   new ResizeObserver(() => globe?.resize()).observe($('#globe-stage'))
   setInterval(() => {
     if (state.mapMode === 'globe') renderMaps(derive())
@@ -402,8 +560,8 @@ export function initApp() {
       clearSelection()
       return
     }
-    if (sel.type === 'event') pickEvent(sel.id, { map: true })
-    if (sel.type === 'asset') pickAsset(sel.id, { map: true })
+    if (sel.type === 'event') pickEvent(sel.id)
+    if (sel.type === 'asset') pickAsset(sel.id)
   })
   new ResizeObserver(() => deskMap?.resize()).observe($('#terrain-canvas'))
 
@@ -417,8 +575,8 @@ export function initApp() {
       if (d.filtered[0]) pickEvent(d.filtered[0].id)
     }
   })
-  $('#btn-demo').onclick = runDesk
-  $('#btn-replay').onclick = runDesk
+  if ($('#btn-demo')) $('#btn-demo').onclick = runDesk
+  if ($('#btn-replay')) $('#btn-replay').onclick = runDesk
   $('#btn-globe').onclick = () => {
     state.mapMode = 'globe'
     render()

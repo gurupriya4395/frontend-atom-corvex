@@ -183,6 +183,20 @@ export const ASSETS = [
   ...DEUTSCHE_HQ,
 ]
 
+/** People an authority can notify. Tied to a site so distance is real. */
+export const PEOPLE = [
+  { id: 'p-mum-lead', name: 'Ananya Shah', role: 'Warehouse lead', siteId: 'ast-mum-wh', channel: 'App + SMS' },
+  { id: 'p-mum-sec', name: 'Vikram Patel', role: 'Site security', siteId: 'ast-mum-wh', channel: 'Radio + SMS' },
+  { id: 'p-mum-shift', name: 'Night shift A', role: 'Floor staff', siteId: 'ast-mum-wh', channel: 'App', headcount: 12 },
+  { id: 'p-mum-gate', name: 'Gate contractors', role: 'Last-mile crew', siteId: 'ast-mum-wh', channel: 'SMS', headcount: 6 },
+  { id: 'p-pune-lead', name: 'Meera Joshi', role: 'Office manager', siteId: 'ast-pune', channel: 'App' },
+  { id: 'p-pune-staff', name: 'Pune day staff', role: 'Office', siteId: 'ast-pune', channel: 'App', headcount: 18 },
+  { id: 'p-ggm-lead', name: 'Arjun Kapoor', role: 'HQ facilities', siteId: 'ast-ggm', channel: 'App + SMS' },
+  { id: 'p-ggm-staff', name: 'Gurugram floor', role: 'HQ staff', siteId: 'ast-ggm', channel: 'App', headcount: 40 },
+  { id: 'p-che-lead', name: 'Lakshmi Iyer', role: 'Plant supervisor', siteId: 'ast-che', channel: 'App + SMS' },
+  { id: 'p-che-night', name: 'Chennai night crew', role: 'Plant', siteId: 'ast-che', channel: 'SMS', headcount: 22 },
+]
+
 const hoursAgo = (h) => Date.now() - h * 3600 * 1000
 const daysAhead = (d) => Date.now() + d * 86400 * 1000
 
