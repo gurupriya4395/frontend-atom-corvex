@@ -432,10 +432,17 @@ function renderMaps(d) {
   const wrap = $('#map-wrap')
   if (!wrap) return
   wrap.className = `map-wrap ${state.mapMode === 'map' ? 'is-imagery' : 'is-satellite'}`
+  wrap.dataset.view = state.mapMode
   const globeStage = $('#globe-stage')
   const mapStage = $('#map-stage')
-  if (globeStage) globeStage.className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
-  if (mapStage) mapStage.className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
+  if (globeStage) {
+    globeStage.className = `globe-stage ${state.mapMode === 'globe' ? 'on' : 'off'}`
+    globeStage.setAttribute('aria-hidden', state.mapMode === 'globe' ? 'false' : 'true')
+  }
+  if (mapStage) {
+    mapStage.className = `map-stage ${state.mapMode === 'map' ? 'on' : 'off'}`
+    mapStage.hidden = state.mapMode !== 'map'
+  }
   const btnGlobe = $('#btn-globe')
   const btnMap = $('#btn-map')
   if (btnGlobe) btnGlobe.classList.toggle('active', state.mapMode === 'globe')

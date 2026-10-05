@@ -149,7 +149,14 @@
   display: block;
   visibility: visible;
   pointer-events: auto;
-  z-index: 2;
+  z-index: 4;
+}
+
+.layout-authority .map-wrap.is-satellite #map-stage,
+.layout-authority .map-wrap #map-stage[hidden] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .layout-authority .map-wrap,
@@ -165,6 +172,7 @@
   bottom: 20px;
   left: 20px;
   transform: none;
+  z-index: 20;
   background: rgba(247, 245, 239, 0.94);
   border: 1px solid var(--auth-line);
   border-radius: 2px;
