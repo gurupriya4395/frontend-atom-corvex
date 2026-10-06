@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Atom Corvex · Operations</title>
+    <title>Atom Corvex · Risk intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/app.css" />
@@ -29,14 +29,13 @@
     <div class="app layout-authority">
       <div id="boot" class="boot">
         <div class="boot-inner">
-          <span class="boot-tag">Demo</span>
+          <span class="boot-tag">Live desk</span>
           <h1>Atom Corvex</h1>
-          <p>Authority desk · notify people near the affected area</p>
+          <p>Who is exposed, and who to notify.</p>
           <ol class="boot-steps">
-            <li>Ingest</li>
-            <li>Correlate</li>
-            <li>Score</li>
-            <li>Alert</li>
+            <li>Situation</li>
+            <li>Exposure</li>
+            <li>Notice</li>
           </ol>
           <div class="scan"><i></i></div>
         </div>
@@ -95,9 +94,18 @@
 
       <div id="workspace-note" class="workspace-placeholder" hidden></div>
 
+      <header class="intel-bar">
+        <div class="intel-brand">
+          <strong>Atom Corvex</strong>
+          <span>Risk intelligence</span>
+        </div>
+        <p class="intel-line">Situation on the map. Notice only to people inside the radius.</p>
+        <div class="intel-status"><i></i> Live</div>
+      </header>
+
       <div class="brand-float">
         Atom Corvex
-        <small>Authority desk</small>
+        <small>Risk intelligence</small>
       </div>
 
       <div class="ops">
@@ -216,16 +224,16 @@
 
         <aside class="feed ops-feed authority-desk">
           <div class="auth-head">
-            <span class="auth-kicker">Authority</span>
-            <h2>Notify nearby</h2>
-            <p>Send an alert only to people inside the affected radius — not the whole city.</p>
+            <span class="auth-kicker">Desk</span>
+            <h2>Notify the exposed</h2>
+            <p>Pick a situation. See who sits inside the radius. Issue a notice only to that group.</p>
             <div id="time-windows" class="time-windows">
               <button type="button" data-mode="live" class="active">Live</button>
               <button type="button" data-mode="forecast">Upcoming</button>
               <button type="button" data-mode="history">History</button>
             </div>
-            <input id="search" class="search ops-search" placeholder="Search event or city…" />
-            <button id="btn-add-event" type="button" class="add-event-toggle">Add event</button>
+            <input id="search" class="search ops-search" placeholder="Search a city or situation…" />
+            <button id="btn-add-event" type="button" class="add-event-toggle">Log a signal</button>
             <form id="add-event-form" class="add-event-form" hidden>
               <input name="title" required placeholder="What is happening?" />
               <select name="place">
@@ -251,12 +259,12 @@
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
               </select>
-              <button type="submit">Save to this window</button>
+              <button type="submit">File on the desk</button>
             </form>
           </div>
           <div class="auth-events">
             <div class="feed-title">
-              <h3>Affected areas</h3>
+              <h3>Situations</h3>
               <em id="feed-count">0</em>
             </div>
             <div id="event-cards" class="cards"></div>
